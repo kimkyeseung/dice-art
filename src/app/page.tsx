@@ -17,6 +17,7 @@ export default function Home() {
   const [selectedDice, setSelectedDice] = useState<DiceValue | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [workId, setWorkId] = useState<string | undefined>(undefined);
+  const [maxDimension, setMaxDimension] = useState(50); // 그리드 최대 크기
 
   // 복구 다이얼로그 상태
   const [showResumeDialog, setShowResumeDialog] = useState(false);
@@ -80,13 +81,14 @@ export default function Home() {
     setShowResumeDialog(false);
   }, []);
 
-  const handleImageLoad = useCallback((imageData: string, image: HTMLImageElement) => {
+  const handleImageLoad = useCallback((imageData: string, image: HTMLImageElement, dimension: number = 50) => {
     setIsProcessing(true);
     setOriginalImage(imageData);
+    setMaxDimension(dimension);
 
     setTimeout(() => {
       try {
-        const grid = processImage(image, 50);
+        const grid = processImage(image, dimension);
         setGridState(grid);
         setWorkId(undefined); // 새 작업이므로 ID 초기화
       } catch (error) {
@@ -97,12 +99,40 @@ export default function Home() {
     }, 100);
   }, []);
 
+  // 더 높은 해상도로 도전
+  const handleHigherResolution = useCallback(() => {
+    if (!originalImage) return;
+
+    const newDimension = maxDimension * 2;
+    setIsProcessing(true);
+    setMaxDimension(newDimension);
+
+    // 이미지 다시 로드하여 처리
+    const img = new Image();
+    img.onload = () => {
+      setTimeout(() => {
+        try {
+          const grid = processImage(img, newDimension);
+          setGridState(grid);
+          setWorkId(undefined);
+          setSelectedDice(null);
+        } catch (error) {
+          console.error('이미지 처리 실패:', error);
+        } finally {
+          setIsProcessing(false);
+        }
+      }, 100);
+    };
+    img.src = originalImage;
+  }, [originalImage, maxDimension]);
+
   const handleReset = () => {
     clearWork();
     setGridState(null);
     setOriginalImage(null);
     setSelectedDice(null);
     setWorkId(undefined);
+    setMaxDimension(50);
   };
 
   // 수동 저장
@@ -330,7 +360,7 @@ export default function Home() {
                 <p className="text-sm sm:text-base text-green-700 mb-4">
                   모든 칸을 채웠습니다. 다운로드하거나 갤러리에 공유해 보세요!
                 </p>
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     onClick={handleDownload}
                     className="px-4 sm:px-6 py-2 sm:py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
@@ -342,6 +372,12 @@ export default function Home() {
                     className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
                   >
                     갤러리에 공유
+                  </button>
+                  <button
+                    onClick={handleHigherResolution}
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
+                  >
+                    2배 해상도로 도전 ({gridState.width * 2}×{gridState.height * 2})
                   </button>
                 </div>
               </div>
