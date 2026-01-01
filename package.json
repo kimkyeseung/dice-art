@@ -2,6 +2,8 @@
   "name": "dice-art",
   "version": "0.1.0",
   "private": true,
+  "author": "kimkyeseung",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

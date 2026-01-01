@@ -199,7 +199,7 @@ export default function GalleryPage() {
       {/* 푸터 */}
       <footer className="border-t border-neutral-200 bg-white mt-auto">
         <div className="max-w-6xl mx-auto px-4 py-4 text-center text-sm text-neutral-500">
-          Dice Art Gallery
+          &copy; {new Date().getFullYear()} kimkyeseung
         </div>
       </footer>
     </div>

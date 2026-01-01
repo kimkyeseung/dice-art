@@ -465,9 +465,13 @@ export default function Home() {
       {/* 푸터 */}
       <footer className="border-t border-neutral-200 bg-white mt-auto">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4 text-center text-xs sm:text-sm text-neutral-500">
-          <Link href="/gallery" className="hover:text-neutral-700 transition-colors">
-            Dice Art Gallery
-          </Link>
+          <div className="flex items-center justify-center gap-2 sm:gap-4">
+            <Link href="/gallery" className="hover:text-neutral-700 transition-colors">
+              Gallery
+            </Link>
+            <span className="text-neutral-300">|</span>
+            <span>&copy; {new Date().getFullYear()} kimkyeseung</span>
+          </div>
         </div>
       </footer>
 
