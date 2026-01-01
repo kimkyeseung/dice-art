@@ -7,6 +7,7 @@ interface DiceProps {
   size?: number;
   className?: string;
   animate?: boolean;
+  showWarning?: boolean; // 틀린 값 경고 표시
 }
 
 // 주사위 눈의 위치 정의
@@ -34,12 +35,14 @@ const positionClasses: Record<string, string> = {
   br: 'bottom-[18%] right-[18%]',
 };
 
-export function Dice({ value, size = 40, className = '', animate = false }: DiceProps) {
+export function Dice({ value, size = 40, className = '', animate = false, showWarning = false }: DiceProps) {
   const dots = dotPositions[value];
   // 주사위 크기에 비례한 눈 크기 (약 18%)
   const dotSize = Math.max(Math.round(size * 0.18), 4);
   // 라운드 비율 (실제 주사위처럼 약 20%)
   const borderRadius = Math.round(size * 0.2);
+  // 경고 아이콘 크기 (주사위 크기의 30%)
+  const warningSize = Math.max(Math.round(size * 0.3), 8);
 
   return (
     <div
@@ -68,6 +71,22 @@ export function Dice({ value, size = 40, className = '', animate = false }: Dice
           }}
         />
       ))}
+      {/* 틀린 값 경고 표시 */}
+      {showWarning && (
+        <div
+          className="absolute flex items-center justify-center bg-yellow-400 text-yellow-900 font-bold rounded-full shadow-sm"
+          style={{
+            width: warningSize,
+            height: warningSize,
+            fontSize: warningSize * 0.7,
+            top: -warningSize * 0.25,
+            right: -warningSize * 0.25,
+            lineHeight: 1,
+          }}
+        >
+          !
+        </div>
+      )}
     </div>
   );
 }

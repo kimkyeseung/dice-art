@@ -11,11 +11,12 @@ interface GridProps {
   selectedDice: DiceValue | null;
   onCellUpdate: (row: number, col: number, value: DiceValue | null) => void;
   scale?: number; // 줌 스케일
+  showMismatch?: boolean; // 틀린 값 표시
 }
 
 const LONG_PRESS_DURATION = 500; // 길게 누르기 감지 시간 (ms)
 
-export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1 }: GridProps) {
+export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false }: GridProps) {
   const { cells, width, height } = gridState;
   const [isDragging, setIsDragging] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -227,6 +228,19 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     };
   }, []);
 
+  // 그리드 밖에서 마우스를 떼도 드래그 종료되도록 window 레벨에서 리스닝
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+      lastCellRef.current = null;
+    };
+
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [isDragging]);
+
   return (
     <div
       ref={gridRef}
@@ -248,12 +262,14 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
         row.map((cell, colIndex) => {
           if (cell.filledValue !== null) {
             // 주사위로 채워진 셀 - key에 filledValue 포함하여 값 변경 시 애니메이션 트리거
+            const isWrong = cell.filledValue !== cell.targetValue;
             return (
               <Dice
                 key={`${rowIndex}-${colIndex}-${cell.filledValue}`}
                 value={cell.filledValue}
                 size={cellSize}
                 animate
+                showWarning={showMismatch && isWrong}
               />
             );
           } else {

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
-import { ImageUploader, Grid, DicePalette, ResumeWorkDialog, ZoomControls, ShareDialog, NicknameDialog } from '@/components';
+import { ImageUploader, Grid, DicePalette, ResumeWorkDialog, ZoomControls, Switch, ShareDialog, NicknameDialog } from '@/components';
 import { useUser } from '@/contexts/UserContext';
 import { GridState, DiceValue } from '@/types';
 import { processImage, calculateProgress } from '@/utils/imageProcessor';
@@ -26,6 +26,9 @@ export default function Home() {
   // 공유 다이얼로그 상태
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareImageData, setShareImageData] = useState<string | null>(null);
+
+  // 틀린 값 표시 상태
+  const [showMismatch, setShowMismatch] = useState(false);
 
   // 사용자 상태
   const { user, setNickname } = useUser();
@@ -364,24 +367,30 @@ export default function Home() {
               </div>
             )}
 
+            {/* 컨트롤 바 (줌, 틀린값 표시) */}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <Switch
+                checked={showMismatch}
+                onChange={setShowMismatch}
+                label="틀린 값 표시"
+                size="sm"
+              />
+              <ZoomControls
+                scale={scale}
+                onZoomIn={zoomIn}
+                onZoomOut={zoomOut}
+                onReset={resetZoom}
+                minScale={0.5}
+                maxScale={3}
+              />
+            </div>
+
             {/* 그리드 영역 */}
             <div className="relative">
-              {/* 줌 컨트롤 */}
-              <div className="absolute top-2 right-2 z-10 sm:top-4 sm:right-4">
-                <ZoomControls
-                  scale={scale}
-                  onZoomIn={zoomIn}
-                  onZoomOut={zoomOut}
-                  onReset={resetZoom}
-                  minScale={0.5}
-                  maxScale={3}
-                />
-              </div>
-
               <div
                 ref={containerRef}
                 className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-6 shadow-sm overflow-auto"
-                style={{ maxHeight: 'calc(100vh - 300px)', minHeight: '300px' }}
+                style={{ maxHeight: 'calc(100vh - 340px)', minHeight: '300px' }}
               >
                 <div
                   className="inline-block origin-top-left transition-transform duration-100"
@@ -395,6 +404,7 @@ export default function Home() {
                     selectedDice={selectedDice}
                     onCellUpdate={handleCellUpdate}
                     scale={scale}
+                    showMismatch={showMismatch}
                   />
                 </div>
               </div>

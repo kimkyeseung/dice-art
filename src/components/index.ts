@@ -5,6 +5,7 @@ export { ImageUploader } from './ImageUploader';
 export { Grid } from './Grid';
 export { ResumeWorkDialog } from './ResumeWorkDialog';
 export { ZoomControls } from './ZoomControls';
+export { Switch } from './Switch';
 export { ArtworkCard } from './ArtworkCard';
 export { ArtworkModal } from './ArtworkModal';
 export { ShareDialog } from './ShareDialog';
