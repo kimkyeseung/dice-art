@@ -2,6 +2,7 @@ import { GridState, DiceValue } from '@/types';
 
 // 주사위 눈의 위치 정의 (정규화된 좌표, 0-1 범위)
 const dotPositions: Record<DiceValue, { x: number; y: number }[]> = {
+  0: [], // 빈 면 (눈 없음)
   1: [{ x: 0.5, y: 0.5 }],
   2: [{ x: 0.75, y: 0.25 }, { x: 0.25, y: 0.75 }],
   3: [{ x: 0.75, y: 0.25 }, { x: 0.5, y: 0.5 }, { x: 0.25, y: 0.75 }],

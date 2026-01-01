@@ -162,7 +162,7 @@ export default function Home() {
     });
   }, []);
 
-  // 키보드 단축키 (1-6으로 주사위 선택)
+  // 키보드 단축키 (0-6으로 주사위 선택)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -170,7 +170,7 @@ export default function Home() {
       }
 
       const key = e.key;
-      if (key >= '1' && key <= '6') {
+      if (key >= '0' && key <= '6') {
         setSelectedDice(parseInt(key) as DiceValue);
       }
     };
@@ -350,7 +350,7 @@ export default function Home() {
                 <p className="text-xs sm:text-sm text-yellow-800">
                   <span className="hidden sm:inline">아래 팔레트에서 주사위를 선택하거나 키보드 </span>
                   <span className="sm:hidden">팔레트에서 주사위 선택 또는 </span>
-                  <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 rounded text-xs sm:text-sm font-mono">1</kbd>-<kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 rounded text-xs sm:text-sm font-mono">6</kbd>
+                  <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 rounded text-xs sm:text-sm font-mono">0</kbd>-<kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 rounded text-xs sm:text-sm font-mono">6</kbd>
                   <span className="hidden sm:inline"> 키를 눌러 시작하세요</span>
                 </p>
               </div>

@@ -8,7 +8,7 @@ interface DicePaletteProps {
   onSelect: (value: DiceValue) => void;
 }
 
-const diceValues: DiceValue[] = [1, 2, 3, 4, 5, 6];
+const diceValues: DiceValue[] = [0, 1, 2, 3, 4, 5, 6];
 
 export function DicePalette({ selectedValue, onSelect }: DicePaletteProps) {
   return (
@@ -40,7 +40,7 @@ export function DicePalette({ selectedValue, onSelect }: DicePaletteProps) {
         ))}
       </div>
       <p className="text-xs text-neutral-500 text-center mt-1.5 sm:mt-2 hidden sm:block">
-        키보드 1-6으로도 선택할 수 있습니다
+        키보드 0-6으로도 선택할 수 있습니다
       </p>
     </fieldset>
   );

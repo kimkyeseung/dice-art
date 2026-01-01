@@ -1,5 +1,5 @@
-// 주사위 눈 값 (1-6)
-export type DiceValue = 1 | 2 | 3 | 4 | 5 | 6;
+// 주사위 눈 값 (0-6, 0은 빈 면)
+export type DiceValue = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 // 셀 상태: 숫자(아직 채워지지 않음) 또는 주사위(채워짐)
 export interface CellState {

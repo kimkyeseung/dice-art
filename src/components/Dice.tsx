@@ -12,6 +12,7 @@ interface DiceProps {
 // 주사위 눈의 위치 정의
 // 3x3 그리드 기준: tl=top-left, tc=top-center, tr=top-right, ml=middle-left, mc=middle-center, mr=middle-right, bl=bottom-left, bc=bottom-center, br=bottom-right
 const dotPositions: Record<DiceValue, string[]> = {
+  0: [], // 빈 면 (눈 없음)
   1: ['mc'],
   2: ['tr', 'bl'],
   3: ['tr', 'mc', 'bl'],

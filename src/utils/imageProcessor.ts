@@ -42,16 +42,16 @@ export function calculateGridDimensions(
 }
 
 /**
- * 밝기 값(0-255)을 주사위 값(1-6)으로 변환합니다.
- * 1 = 가장 어두움 (0-42)
- * 6 = 가장 밝음 (213-255)
+ * 밝기 값(0-255)을 주사위 값(0-6)으로 변환합니다.
+ * 0 = 가장 어두움 (0-36)
+ * 6 = 가장 밝음 (219-255)
  */
 export function brightnessToJDiceValue(brightness: number): DiceValue {
-  // 0-255를 1-6으로 매핑
+  // 0-255를 0-6으로 매핑 (7단계)
   // 밝을수록 높은 숫자 (주사위 눈이 많을수록 밝음)
   const normalized = Math.min(255, Math.max(0, brightness));
-  const value = Math.ceil((normalized / 255) * 6);
-  return Math.max(1, Math.min(6, value)) as DiceValue;
+  const value = Math.floor((normalized / 255) * 7);
+  return Math.min(6, value) as DiceValue;
 }
 
 /**
