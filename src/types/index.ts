@@ -23,6 +23,15 @@ export interface WorkState {
   updatedAt: number;
 }
 
+// 작업 목록 항목 (메타데이터)
+export interface WorkEntry {
+  id: string;
+  gridSize: string; // "50 × 50"
+  progress: number; // 진행률 %
+  createdAt: number;
+  updatedAt: number;
+}
+
 // ===== API 타입 (Phase 7) =====
 
 // 갤러리 작품

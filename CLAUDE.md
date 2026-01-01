@@ -21,11 +21,33 @@ npx prisma studio        # Open Prisma database GUI
 
 ## Architecture
 
+### Page Structure
+
+- `/` - Main page: project intro, image upload, redirects to `/work/[id]`
+- `/work/[id]` - Work page: grid editing, auto-save, dice painting
+- `/my-works` - My works: list of saved works (localStorage), continue or delete
+- `/my-artworks` - My artworks: list of shared artworks (from database)
+- `/gallery` - Gallery: public artworks from all users
+
 ### Core Data Flow
 
 1. **Image Processing** (`src/utils/imageProcessor.ts`): Uploaded images are scaled to a grid (default 50 cells on longest side), and each pixel's luminance is mapped to a DiceValue (1-6) using ITU-R BT.601 standard
 2. **Grid State** (`src/types/index.ts`): `GridState` contains a 2D array of `CellState`, each with `targetValue` (what to fill) and `filledValue` (user's input)
-3. **Persistence**: Work-in-progress saved to localStorage (`src/utils/storage.ts`), completed artworks saved to PostgreSQL via Prisma
+3. **Persistence**: Work-in-progress saved to localStorage (`src/utils/storage.ts`) with UUID-based multi-work support, completed artworks saved to PostgreSQL via Prisma
+
+### Multi-Work Storage
+
+localStorage structure for multiple works:
+- `dice-art-works` - Work list (metadata: id, gridSize, progress, timestamps)
+- `dice-art-work-{uuid}` - Individual work data (gridState, originalImageData)
+
+Key functions in `src/utils/storage.ts`:
+- `generateWorkId()` - UUID v4 generation
+- `saveWork(id, gridState, imageData)` - Save/update work
+- `loadWork(id)` - Load specific work
+- `listWorks()` - Get all work entries
+- `deleteWork(id)` - Remove work
+- `migrateOldStorage()` - Convert old single-work format
 
 ### Key Components
 
@@ -37,7 +59,7 @@ npx prisma studio        # Open Prisma database GUI
 ### State Management
 
 - **UserContext** (`src/contexts/UserContext.tsx`): Stores nickname in localStorage for gallery attribution
-- **useAutoSave** hook: Saves work to localStorage every 60 seconds
+- **useAutoSave** hook: Saves work to localStorage every 60 seconds (requires workId)
 - **useZoomPan** hook: Ctrl+wheel zoom, supports 0.5x-3x scale
 
 ### API Routes (Next.js App Router)
