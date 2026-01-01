@@ -1,0 +1,275 @@
+'use client';
+
+import { useCallback, useRef, useState, useEffect } from 'react';
+import { GridState, DiceValue } from '@/types';
+import { Dice } from './Dice';
+import { NumberCell } from './NumberCell';
+
+interface GridProps {
+  gridState: GridState;
+  cellSize?: number;
+  selectedDice: DiceValue | null;
+  onCellUpdate: (row: number, col: number, value: DiceValue | null) => void;
+  scale?: number; // 줌 스케일
+}
+
+const LONG_PRESS_DURATION = 500; // 길게 누르기 감지 시간 (ms)
+
+export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1 }: GridProps) {
+  const { cells, width, height } = gridState;
+  const [isDragging, setIsDragging] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const lastCellRef = useRef<{ row: number; col: number } | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = useRef(false);
+
+  // 셀 채우기 (좌클릭 또는 드래그)
+  const fillCell = useCallback((row: number, col: number) => {
+    if (selectedDice === null) return;
+
+    const cell = cells[row]?.[col];
+    if (!cell) return;
+
+    // 이미 채워진 셀도 다른 값으로 덮어쓰기 가능
+    if (cell.filledValue !== selectedDice) {
+      onCellUpdate(row, col, selectedDice);
+    }
+  }, [selectedDice, cells, onCellUpdate]);
+
+  // 두 점 사이의 모든 셀을 채우기 (Bresenham's line algorithm)
+  const fillLine = useCallback((
+    fromRow: number,
+    fromCol: number,
+    toRow: number,
+    toCol: number
+  ) => {
+    const dx = Math.abs(toCol - fromCol);
+    const dy = Math.abs(toRow - fromRow);
+    const sx = fromCol < toCol ? 1 : -1;
+    const sy = fromRow < toRow ? 1 : -1;
+    let err = dx - dy;
+
+    let currentRow = fromRow;
+    let currentCol = fromCol;
+
+    while (true) {
+      fillCell(currentRow, currentCol);
+
+      if (currentRow === toRow && currentCol === toCol) break;
+
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        currentCol += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        currentRow += sy;
+      }
+    }
+  }, [fillCell]);
+
+  // 셀 리셋 (우클릭)
+  const resetCell = useCallback((row: number, col: number) => {
+    const cell = cells[row]?.[col];
+    if (!cell || cell.filledValue === null) return;
+
+    onCellUpdate(row, col, null);
+  }, [cells, onCellUpdate]);
+
+  // 마우스 좌표에서 셀 인덱스 계산
+  const getCellFromPoint = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
+    if (!gridRef.current) return null;
+
+    const rect = gridRef.current.getBoundingClientRect();
+    // 스케일을 고려하여 실제 좌표 계산
+    const x = (clientX - rect.left) / scale;
+    const y = (clientY - rect.top) / scale;
+
+    // gap (1px) + padding (1px) 고려
+    const cellWithGap = cellSize + 1;
+    const col = Math.floor((x - 1) / cellWithGap);
+    const row = Math.floor((y - 1) / cellWithGap);
+
+    if (row >= 0 && row < height && col >= 0 && col < width) {
+      return { row, col };
+    }
+    return null;
+  }, [cellSize, width, height, scale]);
+
+  // 마우스 다운 (드래그 시작)
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button === 0) { // 좌클릭
+      setIsDragging(true);
+      const cell = getCellFromPoint(e.clientX, e.clientY);
+      if (cell) {
+        fillCell(cell.row, cell.col);
+        lastCellRef.current = cell;
+      }
+    }
+  }, [getCellFromPoint, fillCell]);
+
+  // 마우스 이동 (드래그 중)
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    if (cell) {
+      // 이전 셀에서 현재 셀까지 라인으로 채우기
+      if (lastCellRef.current) {
+        fillLine(
+          lastCellRef.current.row,
+          lastCellRef.current.col,
+          cell.row,
+          cell.col
+        );
+      } else {
+        fillCell(cell.row, cell.col);
+      }
+      lastCellRef.current = cell;
+    }
+  }, [isDragging, getCellFromPoint, fillCell, fillLine]);
+
+  // 마우스 업 (드래그 종료)
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    lastCellRef.current = null;
+  }, []);
+
+  // 마우스가 그리드를 벗어났을 때
+  const handleMouseLeave = useCallback(() => {
+    setIsDragging(false);
+    lastCellRef.current = null;
+  }, []);
+
+  // 우클릭 (셀 리셋)
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    if (cell) {
+      resetCell(cell.row, cell.col);
+    }
+  }, [getCellFromPoint, resetCell]);
+
+  // 길게 누르기 타이머 취소
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  // 터치 시작
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const cell = getCellFromPoint(touch.clientX, touch.clientY);
+
+    if (cell) {
+      isLongPressRef.current = false;
+      lastCellRef.current = cell;
+
+      // 길게 누르기 타이머 시작
+      longPressTimerRef.current = setTimeout(() => {
+        isLongPressRef.current = true;
+        resetCell(cell.row, cell.col);
+      }, LONG_PRESS_DURATION);
+
+      // 짧은 탭인 경우 즉시 채우기
+      setIsDragging(true);
+    }
+  }, [getCellFromPoint, resetCell]);
+
+  // 터치 이동
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    // 이동하면 길게 누르기 취소
+    cancelLongPress();
+
+    if (!isDragging || isLongPressRef.current) return;
+
+    const touch = e.touches[0];
+    const cell = getCellFromPoint(touch.clientX, touch.clientY);
+
+    if (cell) {
+      if (lastCellRef.current) {
+        fillLine(
+          lastCellRef.current.row,
+          lastCellRef.current.col,
+          cell.row,
+          cell.col
+        );
+      } else {
+        fillCell(cell.row, cell.col);
+      }
+      lastCellRef.current = cell;
+    }
+  }, [isDragging, getCellFromPoint, fillCell, fillLine, cancelLongPress]);
+
+  // 터치 종료
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    cancelLongPress();
+
+    // 길게 누르기가 아니고 드래그도 아닌 경우 (짧은 탭) → 채우기
+    if (!isLongPressRef.current && lastCellRef.current) {
+      fillCell(lastCellRef.current.row, lastCellRef.current.col);
+    }
+
+    setIsDragging(false);
+    lastCellRef.current = null;
+    isLongPressRef.current = false;
+  }, [fillCell, cancelLongPress]);
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      ref={gridRef}
+      className="inline-grid bg-neutral-300 gap-px p-px no-select cursor-crosshair touch-none"
+      style={{
+        gridTemplateColumns: `repeat(${width}, ${cellSize}px)`,
+        gridTemplateRows: `repeat(${height}, ${cellSize}px)`,
+      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onContextMenu={handleContextMenu}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {cells.map((row, rowIndex) =>
+        row.map((cell, colIndex) => {
+          if (cell.filledValue !== null) {
+            // 주사위로 채워진 셀 - key에 filledValue 포함하여 값 변경 시 애니메이션 트리거
+            return (
+              <Dice
+                key={`${rowIndex}-${colIndex}-${cell.filledValue}`}
+                value={cell.filledValue}
+                size={cellSize}
+                animate
+              />
+            );
+          } else {
+            // 아직 채워지지 않은 셀 (숫자 표시)
+            return (
+              <NumberCell
+                key={`${rowIndex}-${colIndex}`}
+                value={cell.targetValue}
+                size={cellSize}
+              />
+            );
+          }
+        })
+      )}
+    </div>
+  );
+}
+
+export default Grid;
