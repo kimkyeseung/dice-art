@@ -160,8 +160,8 @@ export function validateGridState(gridState: unknown): gridState is GridState {
     for (const cell of row) {
       if (!cell || typeof cell !== 'object') return false;
       const c = cell as Record<string, unknown>;
-      if (typeof c.targetValue !== 'number' || c.targetValue < 1 || c.targetValue > 6) return false;
-      if (c.filledValue !== null && (typeof c.filledValue !== 'number' || c.filledValue < 1 || c.filledValue > 6)) return false;
+      if (typeof c.targetValue !== 'number' || c.targetValue < 0 || c.targetValue > 6) return false;
+      if (c.filledValue !== null && (typeof c.filledValue !== 'number' || c.filledValue < 0 || c.filledValue > 6)) return false;
     }
   }
 
