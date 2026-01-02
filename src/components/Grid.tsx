@@ -187,6 +187,21 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isDragging]);
 
+  // 현재 모드와 콜백을 ref로 저장 (이벤트 핸들러에서 최신 값 참조)
+  const modeRef = useRef(mode);
+  const onPanRef = useRef(onPan);
+  const fillCellRef = useRef(fillCell);
+  const fillLineRef = useRef(fillLine);
+  const resetCellRef = useRef(resetCell);
+
+  useEffect(() => {
+    modeRef.current = mode;
+    onPanRef.current = onPan;
+    fillCellRef.current = fillCell;
+    fillLineRef.current = fillLine;
+    resetCellRef.current = resetCell;
+  }, [mode, onPan, fillCell, fillLine, resetCell]);
+
   // 터치 이벤트를 native로 등록 (passive: false로 preventDefault 가능하게)
   useEffect(() => {
     const grid = gridRef.current;
@@ -196,9 +211,10 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
       const touch = e.touches[0];
 
       // 이동 모드: 스크롤 준비
-      if (mode === 'pan') {
+      if (modeRef.current === 'pan') {
         lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
-        return; // 기본 동작 허용하지 않음 (스크롤은 onTouchMove에서 처리)
+        e.preventDefault();
+        return;
       }
 
       // 채우기 모드
@@ -211,11 +227,11 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
 
         longPressTimerRef.current = setTimeout(() => {
           isLongPressRef.current = true;
-          resetCell(cell.row, cell.col);
+          resetCellRef.current(cell.row, cell.col);
         }, LONG_PRESS_DURATION);
 
         setIsDragging(true);
-        fillCell(cell.row, cell.col);
+        fillCellRef.current(cell.row, cell.col);
       }
     };
 
@@ -223,11 +239,11 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
       const touch = e.touches[0];
 
       // 이동 모드: 스크롤 처리
-      if (mode === 'pan') {
-        if (lastTouchRef.current && onPan) {
+      if (modeRef.current === 'pan') {
+        if (lastTouchRef.current && onPanRef.current) {
           const deltaX = touch.clientX - lastTouchRef.current.x;
           const deltaY = touch.clientY - lastTouchRef.current.y;
-          onPan(deltaX, deltaY);
+          onPanRef.current(deltaX, deltaY);
         }
         lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
         e.preventDefault();
@@ -248,14 +264,14 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
         lastCellRef.current.col !== cell.col
       )) {
         if (lastCellRef.current) {
-          fillLine(
+          fillLineRef.current(
             lastCellRef.current.row,
             lastCellRef.current.col,
             cell.row,
             cell.col
           );
         } else {
-          fillCell(cell.row, cell.col);
+          fillCellRef.current(cell.row, cell.col);
         }
         lastCellRef.current = cell;
       }
@@ -263,7 +279,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
 
     const onTouchEnd = () => {
       // 이동 모드
-      if (mode === 'pan') {
+      if (modeRef.current === 'pan') {
         lastTouchRef.current = null;
         return;
       }
@@ -284,7 +300,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
       grid.removeEventListener('touchmove', onTouchMove);
       grid.removeEventListener('touchend', onTouchEnd);
     };
-  }, [getCellFromPoint, fillCell, fillLine, resetCell, cancelLongPress, mode, onPan]);
+  }, [getCellFromPoint, cancelLongPress]);
 
   return (
     <div

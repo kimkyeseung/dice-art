@@ -424,8 +424,8 @@ export default function WorkPage({ params }: WorkPageProps) {
               </p>
             </div>
 
-            {/* 팔레트 (하단 고정) */}
-            <div className="sticky bottom-2 sm:bottom-4">
+            {/* 팔레트 (하단 고정) - 이동 모드에서는 모바일에서만 숨김 */}
+            <div className={`sticky bottom-2 sm:bottom-4 ${gridMode === 'pan' ? 'hidden sm:block' : ''}`}>
               <DicePalette
                 selectedValue={selectedDice}
                 onSelect={setSelectedDice}
