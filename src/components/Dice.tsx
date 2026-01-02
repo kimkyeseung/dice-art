@@ -12,6 +12,7 @@ interface DiceProps {
 
 // 주사위 눈의 위치 정의
 // 3x3 그리드 기준: tl=top-left, tc=top-center, tr=top-right, ml=middle-left, mc=middle-center, mr=middle-right, bl=bottom-left, bc=bottom-center, br=bottom-right
+// 6의 경우 가로 간격을 좁혀서 배치 (6l, 6r 사용)
 const dotPositions: Record<DiceValue, string[]> = {
   0: [], // 빈 면 (눈 없음)
   1: ['mc'],
@@ -19,28 +20,35 @@ const dotPositions: Record<DiceValue, string[]> = {
   3: ['tr', 'mc', 'bl'],
   4: ['tl', 'tr', 'bl', 'br'],
   5: ['tl', 'tr', 'mc', 'bl', 'br'],
-  6: ['tl', 'ml', 'bl', 'tr', 'mr', 'br'],
+  6: ['t6l', 'm6l', 'b6l', 't6r', 'm6r', 'b6r'],
 };
 
-// 위치별 CSS 클래스
+// 위치별 CSS 클래스 (베젤을 최소화하여 눈을 더 바깥쪽에 배치)
 const positionClasses: Record<string, string> = {
-  tl: 'top-[18%] left-[18%]',
-  tc: 'top-[18%] left-1/2 -translate-x-1/2',
-  tr: 'top-[18%] right-[18%]',
-  ml: 'top-1/2 left-[18%] -translate-y-1/2',
+  tl: 'top-[10%] left-[10%]',
+  tc: 'top-[10%] left-1/2 -translate-x-1/2',
+  tr: 'top-[10%] right-[10%]',
+  ml: 'top-1/2 left-[10%] -translate-y-1/2',
   mc: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
-  mr: 'top-1/2 right-[18%] -translate-y-1/2',
-  bl: 'bottom-[18%] left-[18%]',
-  bc: 'bottom-[18%] left-1/2 -translate-x-1/2',
-  br: 'bottom-[18%] right-[18%]',
+  mr: 'top-1/2 right-[10%] -translate-y-1/2',
+  bl: 'bottom-[10%] left-[10%]',
+  bc: 'bottom-[10%] left-1/2 -translate-x-1/2',
+  br: 'bottom-[10%] right-[10%]',
+  // 6 주사위 전용 (가로 간격 좁힘: left 15%, right 15%, 세로 간격 벌림: 7%)
+  t6l: 'top-[7%] left-[15%]',
+  t6r: 'top-[7%] right-[15%]',
+  m6l: 'top-1/2 left-[15%] -translate-y-1/2',
+  m6r: 'top-1/2 right-[15%] -translate-y-1/2',
+  b6l: 'bottom-[7%] left-[15%]',
+  b6r: 'bottom-[7%] right-[15%]',
 };
 
 export function Dice({ value, size = 40, className = '', animate = false, showWarning = false }: DiceProps) {
   const dots = dotPositions[value];
-  // 주사위 크기에 비례한 눈 크기 (약 18%)
-  const dotSize = Math.max(Math.round(size * 0.18), 4);
-  // 라운드 비율 (실제 주사위처럼 약 20%)
-  const borderRadius = Math.round(size * 0.2);
+  // 주사위 크기에 비례한 눈 크기 (약 30% - 실제 주사위처럼 크게)
+  const dotSize = Math.max(Math.round(size * 0.30), 6);
+  // 라운드 비율 (베젤 최소화를 위해 15%로 줄임)
+  const borderRadius = Math.round(size * 0.15);
   // 경고 아이콘 크기 (주사위 크기의 30%)
   const warningSize = Math.max(Math.round(size * 0.3), 8);
 
