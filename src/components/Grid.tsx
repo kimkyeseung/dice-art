@@ -188,6 +188,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
   const fillLineRef = useRef(fillLine);
   const resetCellRef = useRef(resetCell);
   const cellsRef = useRef(cells);
+  const getCellFromPointRef = useRef(getCellFromPoint);
 
   useEffect(() => {
     modeRef.current = mode;
@@ -196,7 +197,8 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     fillLineRef.current = fillLine;
     resetCellRef.current = resetCell;
     cellsRef.current = cells;
-  }, [mode, onPan, fillCell, fillLine, resetCell, cells]);
+    getCellFromPointRef.current = getCellFromPoint;
+  }, [mode, onPan, fillCell, fillLine, resetCell, cells, getCellFromPoint]);
 
   // 터치 이벤트를 native로 등록 (passive: false로 preventDefault 가능하게)
   useEffect(() => {
@@ -215,7 +217,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
 
       // 채우기 모드
       e.preventDefault();
-      const cell = getCellFromPoint(touch.clientX, touch.clientY);
+      const cell = getCellFromPointRef.current(touch.clientX, touch.clientY);
 
       if (cell) {
         isLongPressRef.current = false;
@@ -261,7 +263,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
 
       if (isLongPressRef.current) return;
 
-      const cell = getCellFromPoint(touch.clientX, touch.clientY);
+      const cell = getCellFromPointRef.current(touch.clientX, touch.clientY);
 
       if (cell && (
         !lastCellRef.current ||
@@ -305,7 +307,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
       grid.removeEventListener('touchmove', onTouchMove);
       grid.removeEventListener('touchend', onTouchEnd);
     };
-  }, [getCellFromPoint, cancelLongPress]);
+  }, [cancelLongPress]);
 
   return (
     <div
