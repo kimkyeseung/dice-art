@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, use, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, VirtualJoystick } from '@/components';
+import type { PaletteValue } from '@/components';
 import { useUser } from '@/contexts/UserContext';
 import { GridState, DiceValue } from '@/types';
 import { processImage, calculateProgress } from '@/utils/imageProcessor';
@@ -22,7 +23,7 @@ export default function WorkPage({ params }: WorkPageProps) {
 
   const [gridState, setGridState] = useState<GridState | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [selectedDice, setSelectedDice] = useState<DiceValue | null>(null);
+  const [selectedDice, setSelectedDice] = useState<PaletteValue | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [maxDimension, setMaxDimension] = useState(50);
@@ -174,16 +175,18 @@ export default function WorkPage({ params }: WorkPageProps) {
     });
   }, []);
 
-  // 키보드 단축키 (0-6으로 주사위 선택)
+  // 키보드 단축키 (0-6으로 주사위 선택, E로 지우개)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
-      const key = e.key;
+      const key = e.key.toLowerCase();
       if (key >= '0' && key <= '6') {
         setSelectedDice(parseInt(key) as DiceValue);
+      } else if (key === 'e') {
+        setSelectedDice('eraser');
       }
     };
 
@@ -372,11 +375,20 @@ export default function WorkPage({ params }: WorkPageProps) {
               </div>
             )}
 
-            {/* 선택된 주사위 표시 */}
+            {/* 선택된 주사위/지우개 표시 */}
             {!isComplete && selectedDice !== null && (
               <div className="text-center text-xs sm:text-sm text-neutral-600">
-                <span className="hidden sm:inline">선택된 주사위: <span className="font-bold">{selectedDice}</span> | 좌클릭/드래그로 채우기 | 우클릭으로 지우기</span>
-                <span className="sm:hidden">주사위 <span className="font-bold">{selectedDice}</span> 선택됨 · 탭/드래그: 채우기 · 길게 누름: 지우기</span>
+                {selectedDice === 'eraser' ? (
+                  <>
+                    <span className="hidden sm:inline text-red-600">지우개 선택됨 | 좌클릭/드래그로 지우기</span>
+                    <span className="sm:hidden text-red-600">지우개 선택됨 · 탭/드래그로 지우기</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">선택된 주사위: <span className="font-bold">{selectedDice}</span> | 좌클릭/드래그로 채우기 | 우클릭으로 지우기</span>
+                    <span className="sm:hidden">주사위 <span className="font-bold">{selectedDice}</span> 선택됨 · 탭/드래그: 채우기 · 길게 누름: 지우기</span>
+                  </>
+                )}
               </div>
             )}
 

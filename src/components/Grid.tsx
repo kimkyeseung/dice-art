@@ -4,11 +4,12 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { GridState, DiceValue } from '@/types';
 import { Dice } from './Dice';
 import { NumberCell } from './NumberCell';
+import type { PaletteValue } from './DicePalette';
 
 interface GridProps {
   gridState: GridState;
   cellSize?: number;
-  selectedDice: DiceValue | null;
+  selectedDice: PaletteValue | null;
   onCellUpdate: (row: number, col: number, value: DiceValue | null) => void;
   scale?: number; // 줌 스케일
   showMismatch?: boolean; // 틀린 값 표시
@@ -25,12 +26,18 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
   const isLongPressRef = useRef(false);
   const hadValueOnStartRef = useRef(false);
 
-  // 셀 채우기 (좌클릭 또는 드래그)
+  // 셀 채우기 또는 지우기 (좌클릭 또는 드래그)
   const fillCell = useCallback((row: number, col: number) => {
     if (selectedDice === null) return;
     if (row < 0 || row >= height || col < 0 || col >= width) return;
 
-    onCellUpdate(row, col, selectedDice);
+    if (selectedDice === 'eraser') {
+      // 지우개 모드: 셀 리셋
+      onCellUpdate(row, col, null);
+    } else {
+      // 주사위 채우기
+      onCellUpdate(row, col, selectedDice);
+    }
   }, [selectedDice, height, width, onCellUpdate]);
 
   // 두 점 사이의 모든 셀을 채우기 (Bresenham's line algorithm)

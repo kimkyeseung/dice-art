@@ -1,6 +1,7 @@
 export { Dice } from './Dice';
 export { NumberCell } from './NumberCell';
 export { DicePalette } from './DicePalette';
+export type { PaletteValue } from './DicePalette';
 export { ImageUploader } from './ImageUploader';
 export { Grid } from './Grid';
 export { ResumeWorkDialog } from './ResumeWorkDialog';
