@@ -193,6 +193,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
   const fillCellRef = useRef(fillCell);
   const fillLineRef = useRef(fillLine);
   const resetCellRef = useRef(resetCell);
+  const cellsRef = useRef(cells);
 
   useEffect(() => {
     modeRef.current = mode;
@@ -200,7 +201,8 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     fillCellRef.current = fillCell;
     fillLineRef.current = fillLine;
     resetCellRef.current = resetCell;
-  }, [mode, onPan, fillCell, fillLine, resetCell]);
+    cellsRef.current = cells;
+  }, [mode, onPan, fillCell, fillLine, resetCell, cells]);
 
   // 터치 이벤트를 native로 등록 (passive: false로 preventDefault 가능하게)
   useEffect(() => {
@@ -225,9 +227,18 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
         isLongPressRef.current = false;
         lastCellRef.current = cell;
 
+        // 터치 시작 시점에 셀이 이미 채워져 있는지 확인
+        // 길게 누르기는 이미 채워진 셀을 리셋하는 용도이므로,
+        // 빈 셀을 채운 후 리셋하지 않도록 함
+        const cellData = cellsRef.current[cell.row]?.[cell.col];
+        const hadValue = cellData?.filledValue !== null;
+
         longPressTimerRef.current = setTimeout(() => {
           isLongPressRef.current = true;
-          resetCellRef.current(cell.row, cell.col);
+          // 터치 시작 시 이미 값이 있었던 경우에만 리셋
+          if (hadValue) {
+            resetCellRef.current(cell.row, cell.col);
+          }
         }, LONG_PRESS_DURATION);
 
         setIsDragging(true);

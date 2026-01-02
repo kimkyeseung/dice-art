@@ -257,7 +257,7 @@ describe('Grid Touch Events', () => {
   });
 
   describe('Long Press (Reset Cell)', () => {
-    it('should reset cell on long press', () => {
+    it('should reset cell on long press only if cell was already filled', () => {
       // Pre-fill cell (2, 2)
       const gridState = createTestGridState(5, 5);
       gridState.cells[2][2].filledValue = 5;
@@ -290,8 +290,51 @@ describe('Grid Touch Events', () => {
         jest.advanceTimersByTime(500);
       });
 
-      // Should reset cell (call with null)
+      // Should reset cell (call with null) because it was already filled
       expect(onCellUpdate).toHaveBeenCalledWith(2, 2, null);
+    });
+
+    it('should NOT reset cell on long press if cell was empty at touch start', () => {
+      // Cell (2, 2) is empty (filledValue = null)
+      const gridState = createTestGridState(5, 5);
+
+      const onCellUpdate = jest.fn();
+
+      const { container } = render(
+        <Grid
+          gridState={gridState}
+          selectedDice={3}
+          onCellUpdate={onCellUpdate}
+          cellSize={cellSize}
+        />
+      );
+
+      const grid = container.firstChild as HTMLElement;
+      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200,
+        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+      });
+
+      // Cell should be filled immediately
+      expect(onCellUpdate).toHaveBeenCalledWith(2, 2, 3);
+      onCellUpdate.mockClear();
+
+      // Fast forward 500ms for long press
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      // Should NOT reset cell because it was empty at touch start
+      const resetCalls = onCellUpdate.mock.calls.filter(
+        (call) => call[2] === null
+      );
+      expect(resetCalls.length).toBe(0);
     });
 
     it('should cancel long press on touch move', () => {
@@ -383,6 +426,102 @@ describe('Grid Touch Events', () => {
       });
 
       expect(onCellUpdate).toHaveBeenCalledWith(3, 3, 3);
+    });
+
+    it('should cancel long press timer on touch end (quick tap)', () => {
+      const gridState = createTestGridState(5, 5);
+      const onCellUpdate = jest.fn();
+
+      const { container } = render(
+        <Grid
+          gridState={gridState}
+          selectedDice={3}
+          onCellUpdate={onCellUpdate}
+          cellSize={cellSize}
+        />
+      );
+
+      const grid = container.firstChild as HTMLElement;
+      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200,
+        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+
+      // Quick tap: touchstart -> wait 100ms -> touchend
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+      });
+
+      // Cell should be filled
+      expect(onCellUpdate).toHaveBeenCalledWith(2, 2, 3);
+      onCellUpdate.mockClear();
+
+      // Wait 100ms (less than 500ms long press duration)
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Touch end
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchend', x, y));
+      });
+
+      // Wait for remaining long press time + extra
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      // Cell should NOT be reset (timer should have been cancelled)
+      const resetCalls = onCellUpdate.mock.calls.filter(
+        (call) => call[2] === null
+      );
+      expect(resetCalls.length).toBe(0);
+    });
+
+    it('should only fill once on quick tap, not reset', () => {
+      const gridState = createTestGridState(5, 5);
+      const onCellUpdate = jest.fn();
+
+      const { container } = render(
+        <Grid
+          gridState={gridState}
+          selectedDice={4}
+          onCellUpdate={onCellUpdate}
+          cellSize={cellSize}
+        />
+      );
+
+      const grid = container.firstChild as HTMLElement;
+      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200,
+        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      const { x, y } = getCellCenter(1, 1, { left: 0, top: 0 } as DOMRect);
+
+      // Simulate quick tap sequence
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(50);
+      });
+
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchend', x, y));
+      });
+
+      // Run any pending timers
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should have exactly one fill call and no reset calls
+      expect(onCellUpdate).toHaveBeenCalledTimes(1);
+      expect(onCellUpdate).toHaveBeenCalledWith(1, 1, 4);
     });
   });
 
