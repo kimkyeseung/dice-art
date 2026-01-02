@@ -229,8 +229,8 @@ export default function WorkPage({ params }: WorkPageProps) {
           <div className="flex items-center justify-between">
             {/* 왼쪽: 로고 + 네비게이션 (데스크탑) */}
             <div className="flex items-center gap-2 sm:gap-4">
-              <Link href="/" className="min-w-0">
-                <h1 className="text-lg sm:text-2xl font-bold text-neutral-800">Dice<br className="sm:hidden" /> Art</h1>
+              <Link href="/" className="flex-shrink-0">
+                <h1 className="text-lg sm:text-2xl font-bold text-neutral-800 whitespace-nowrap">Dice Art</h1>
               </Link>
               {/* 데스크탑 네비게이션 */}
               <nav className="hidden sm:flex items-center gap-2">

@@ -21,11 +21,11 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
   useEffect(() => {
     const animate = () => {
       if (isActive && (lastMoveRef.current.x !== 0 || lastMoveRef.current.y !== 0)) {
-        // 속도 조절 (거리에 비례)
+        // 속도 조절 (거리에 비례), 방향 반전 (조이스틱 방향 = 스크롤 방향)
         const speed = 8;
         onMove(
-          lastMoveRef.current.x * speed,
-          lastMoveRef.current.y * speed
+          -lastMoveRef.current.x * speed,
+          -lastMoveRef.current.y * speed
         );
       }
       animationFrameRef.current = requestAnimationFrame(animate);
