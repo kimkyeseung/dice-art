@@ -41,7 +41,7 @@ export default function WorkPage({ params }: WorkPageProps) {
   const [showNicknameDialog, setShowNicknameDialog] = useState(false);
 
   // 자동 저장 훅
-  const { save } = useAutoSave({
+  const { save, saveStatus } = useAutoSave({
     workId,
     gridState,
     originalImageData: originalImage,
@@ -225,9 +225,9 @@ export default function WorkPage({ params }: WorkPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-100">
+    <div className="h-dvh overflow-hidden flex flex-col bg-neutral-100">
       {/* 헤더 */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
+      <header className="bg-white border-b border-neutral-200 flex-shrink-0 z-10">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-4">
           <div className="flex items-center justify-between">
             {/* 왼쪽: 로고 + 네비게이션 (데스크탑) */}
@@ -235,6 +235,16 @@ export default function WorkPage({ params }: WorkPageProps) {
               <Link href="/" className="flex-shrink-0">
                 <h1 className="text-lg sm:text-2xl font-bold text-neutral-800 whitespace-nowrap">Dice Art</h1>
               </Link>
+              {/* 자동 저장 상태 메시지 */}
+              {saveStatus && (
+                <span
+                  className={`text-xs transition-opacity ${
+                    saveStatus === 'success' ? 'text-green-600' : 'text-red-500'
+                  }`}
+                >
+                  {saveStatus === 'success' ? '저장되었어요' : '저장 실패'}
+                </span>
+              )}
               {/* 데스크탑 네비게이션 */}
               <nav className="hidden sm:flex items-center gap-2">
                 <Link
@@ -323,7 +333,8 @@ export default function WorkPage({ params }: WorkPageProps) {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-8 flex-1 min-h-0 overflow-hidden flex flex-col w-full">
         {/* 로딩 */}
         {isProcessing && (
           <div className="flex flex-col items-center justify-center py-20">
@@ -334,7 +345,7 @@ export default function WorkPage({ params }: WorkPageProps) {
 
         {/* 그리드 작업 화면 */}
         {!isProcessing && (
-          <div className="space-y-4 sm:space-y-6">
+          <div className="flex-1 min-h-0 flex flex-col gap-2 sm:gap-4">
             {/* 완성 축하 메시지 */}
             {isComplete && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 text-center">
@@ -414,15 +425,14 @@ export default function WorkPage({ params }: WorkPageProps) {
             </div>
 
             {/* 그리드 영역 */}
-            <div className="relative">
+            <div className="relative flex-1 min-h-0 flex flex-col">
               <div
                 ref={(el) => {
                   // 두 ref를 모두 연결
                   if (containerRef) (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
                   (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
                 }}
-                className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-6 shadow-sm overflow-auto"
-                style={{ maxHeight: 'calc(100vh - 340px)', minHeight: '300px' }}
+                className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-6 shadow-sm overflow-auto flex-1 min-h-0"
               >
                 <div
                   className="inline-block origin-top-left transition-transform duration-100"
@@ -448,7 +458,7 @@ export default function WorkPage({ params }: WorkPageProps) {
             </div>
 
             {/* 하단 컨트롤: 조이스틱(모바일) + 팔레트 */}
-            <div className="sticky bottom-2 sm:bottom-4 flex items-end gap-2">
+            <div className="flex-shrink-0 flex items-end gap-2 pb-2 sm:pb-0">
               {/* 조이스틱 - 모바일에서만 표시 */}
               <div className="sm:hidden flex-shrink-0">
                 <VirtualJoystick
@@ -466,10 +476,11 @@ export default function WorkPage({ params }: WorkPageProps) {
             </div>
           </div>
         )}
+        </div>
       </main>
 
-      {/* 푸터 */}
-      <footer className="border-t border-neutral-200 bg-white mt-auto">
+      {/* 푸터 - 모바일에서 숨김 */}
+      <footer className="hidden sm:block border-t border-neutral-200 bg-white flex-shrink-0">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 text-center text-xs sm:text-sm text-neutral-500">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-4">
