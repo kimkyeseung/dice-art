@@ -41,7 +41,7 @@ export default function WorkPage({ params }: WorkPageProps) {
   const [showNicknameDialog, setShowNicknameDialog] = useState(false);
 
   // 자동 저장 훅
-  const { save } = useAutoSave({
+  const { save, saveStatus } = useAutoSave({
     workId,
     gridState,
     originalImageData: originalImage,
@@ -235,6 +235,16 @@ export default function WorkPage({ params }: WorkPageProps) {
               <Link href="/" className="flex-shrink-0">
                 <h1 className="text-lg sm:text-2xl font-bold text-neutral-800 whitespace-nowrap">Dice Art</h1>
               </Link>
+              {/* 자동 저장 상태 메시지 */}
+              {saveStatus && (
+                <span
+                  className={`text-xs transition-opacity ${
+                    saveStatus === 'success' ? 'text-green-600' : 'text-red-500'
+                  }`}
+                >
+                  {saveStatus === 'success' ? '저장되었어요' : '저장 실패'}
+                </span>
+              )}
               {/* 데스크탑 네비게이션 */}
               <nav className="hidden sm:flex items-center gap-2">
                 <Link
