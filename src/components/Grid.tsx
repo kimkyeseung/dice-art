@@ -44,7 +44,11 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
   useEffect(() => {
     if (!shouldVirtualize || !scrollContainerRef?.current) return;
 
+    let rafId: number | null = null;
+    let isScheduled = false;
+
     const updateVisibleRange = () => {
+      isScheduled = false;
       const container = scrollContainerRef.current;
       if (!container) return;
 
@@ -63,18 +67,33 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
       const startRow = Math.max(0, Math.floor(scrollTop / scaledCellSize) - OVERSCAN);
       const endRow = Math.min(height, Math.ceil((scrollTop + containerHeight) / scaledCellSize) + OVERSCAN);
 
-      setVisibleRange({ startRow, endRow, startCol, endCol });
+      setVisibleRange(prev => {
+        // 변경이 없으면 상태 업데이트 스킵
+        if (prev.startRow === startRow && prev.endRow === endRow &&
+            prev.startCol === startCol && prev.endCol === endCol) {
+          return prev;
+        }
+        return { startRow, endRow, startCol, endCol };
+      });
+    };
+
+    // RAF로 throttle하여 성능 최적화
+    const scheduleUpdate = () => {
+      if (isScheduled) return;
+      isScheduled = true;
+      rafId = requestAnimationFrame(updateVisibleRange);
     };
 
     const container = scrollContainerRef.current;
     updateVisibleRange();
 
-    container.addEventListener('scroll', updateVisibleRange);
-    window.addEventListener('resize', updateVisibleRange);
+    container.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
 
     return () => {
-      container.removeEventListener('scroll', updateVisibleRange);
-      window.removeEventListener('resize', updateVisibleRange);
+      container.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [shouldVirtualize, scrollContainerRef, cellSize, scale, width, height]);
 
