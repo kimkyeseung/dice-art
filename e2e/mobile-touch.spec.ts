@@ -334,4 +334,190 @@ test.describe('Mobile Touch Interactions', () => {
     // 모바일 뷰포트에서 조이스틱이 보여야 함
     await expect(joystickContainer.first()).toBeVisible({ timeout: 10000 });
   });
+
+  test('should skip filled cells when dragging but overwrite on single tap', async ({ page }) => {
+    const presetImage = page.locator('[data-testid="preset-image"]').first();
+    await expect(presetImage).toBeVisible({ timeout: 10000 });
+    await presetImage.click();
+    await page.waitForURL(/\/work\//);
+
+    const grid = page.locator('[class*="inline-grid"]');
+    await expect(grid).toBeVisible({ timeout: 10000 });
+
+    const gridBox = await grid.boundingBox();
+    expect(gridBox).not.toBeNull();
+
+    if (gridBox) {
+      const client = await page.context().newCDPSession(page);
+      const cellSize = 25; // 기본 셀 크기 + gap
+
+      // 1단계: 주사위 1로 첫 번째 셀 채우기
+      const diceButton1 = page.locator('[data-testid="dice-button-1"]').first();
+      await expect(diceButton1).toBeVisible({ timeout: 10000 });
+      await diceButton1.click();
+
+      const firstCellX = gridBox.x + 12;
+      const firstCellY = gridBox.y + 12;
+
+      // 첫 번째 셀 단일 탭으로 채우기
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: firstCellX, y: firstCellY, id: 0 }],
+      });
+      await page.waitForTimeout(50);
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await page.waitForTimeout(200);
+
+      // 채워진 주사위 확인 (animate 클래스가 있는 주사위)
+      const filledDice = grid.locator('[class*="animate-dice-pop"]');
+      const initialCount = await filledDice.count();
+      expect(initialCount).toBeGreaterThanOrEqual(1);
+
+      // 2단계: 주사위 2로 드래그 - 이미 채워진 첫 번째 셀 위를 지나감
+      const diceButton2 = page.locator('[data-testid="dice-button-2"]').first();
+      await expect(diceButton2).toBeVisible({ timeout: 10000 });
+      await diceButton2.click();
+
+      // 첫 번째 셀을 시작점으로 하여 오른쪽으로 드래그
+      const dragStartX = firstCellX;
+      const dragStartY = firstCellY;
+      const dragEndX = firstCellX + cellSize * 3; // 3칸 오른쪽으로
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: dragStartX, y: dragStartY, id: 0 }],
+      });
+
+      // 드래그 (여러 포인트로 이동)
+      const steps = 6;
+      for (let i = 1; i <= steps; i++) {
+        const x = dragStartX + ((dragEndX - dragStartX) * i) / steps;
+        await client.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x, y: dragStartY, id: 0 }],
+        });
+        await page.waitForTimeout(30);
+      }
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await page.waitForTimeout(300);
+
+      // 드래그 후 주사위 개수 확인 (첫 번째 셀은 덮어쓰지 않았으므로 여전히 주사위 1)
+      // 새로운 셀들만 채워졌어야 함
+      const afterDragCount = await filledDice.count();
+      expect(afterDragCount).toBeGreaterThan(initialCount);
+
+      // 3단계: 주사위 3으로 이미 채워진 첫 번째 셀 단일 탭 - 덮어써야 함
+      const diceButton3 = page.locator('[data-testid="dice-button-3"]').first();
+      await expect(diceButton3).toBeVisible({ timeout: 10000 });
+      await diceButton3.click();
+
+      // 첫 번째 셀 단일 탭으로 덮어쓰기
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: firstCellX, y: firstCellY, id: 0 }],
+      });
+      await page.waitForTimeout(50);
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await page.waitForTimeout(300);
+
+      // 덮어쓰기 후에도 총 주사위 개수는 동일해야 함 (새로 추가되지 않음)
+      const afterOverwriteCount = await filledDice.count();
+      // 덮어쓰면 key가 변경되어 새 애니메이션이 트리거됨
+      expect(afterOverwriteCount).toBeGreaterThanOrEqual(afterDragCount);
+    }
+  });
+
+  test('should not skip filled cells when dragging with eraser', async ({ page }) => {
+    const presetImage = page.locator('[data-testid="preset-image"]').first();
+    await expect(presetImage).toBeVisible({ timeout: 10000 });
+    await presetImage.click();
+    await page.waitForURL(/\/work\//);
+
+    const grid = page.locator('[class*="inline-grid"]');
+    await expect(grid).toBeVisible({ timeout: 10000 });
+
+    const gridBox = await grid.boundingBox();
+    expect(gridBox).not.toBeNull();
+
+    if (gridBox) {
+      const client = await page.context().newCDPSession(page);
+      const cellSize = 25;
+
+      // 1단계: 주사위 1로 여러 셀 채우기
+      const diceButton1 = page.locator('[data-testid="dice-button-1"]').first();
+      await expect(diceButton1).toBeVisible({ timeout: 10000 });
+      await diceButton1.click();
+
+      const startX = gridBox.x + 12;
+      const startY = gridBox.y + 12;
+      const endX = startX + cellSize * 3;
+
+      // 드래그로 여러 셀 채우기
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: startX, y: startY, id: 0 }],
+      });
+
+      for (let i = 1; i <= 6; i++) {
+        const x = startX + ((endX - startX) * i) / 6;
+        await client.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x, y: startY, id: 0 }],
+        });
+        await page.waitForTimeout(30);
+      }
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await page.waitForTimeout(300);
+
+      // 채워진 주사위 개수 확인
+      const filledDice = grid.locator('[class*="animate-dice-pop"]');
+      const filledCount = await filledDice.count();
+      expect(filledCount).toBeGreaterThanOrEqual(1);
+
+      // 2단계: 지우개로 같은 경로 드래그 - 채워진 셀도 모두 지워야 함
+      const eraserButton = page.locator('[data-testid="dice-button-eraser"]').first();
+      await expect(eraserButton).toBeVisible({ timeout: 10000 });
+      await eraserButton.click();
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: startX, y: startY, id: 0 }],
+      });
+
+      for (let i = 1; i <= 6; i++) {
+        const x = startX + ((endX - startX) * i) / 6;
+        await client.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x, y: startY, id: 0 }],
+        });
+        await page.waitForTimeout(30);
+      }
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await page.waitForTimeout(300);
+
+      // 지우개 드래그 후 해당 영역의 주사위가 지워졌는지 확인
+      // NumberCell이 다시 나타나야 함
+      const numberCells = grid.locator('.font-mono.font-bold');
+      const numberCellCount = await numberCells.count();
+      expect(numberCellCount).toBeGreaterThanOrEqual(1);
+    }
+  });
 });

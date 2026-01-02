@@ -27,9 +27,16 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
   const hadValueOnStartRef = useRef(false);
 
   // 셀 채우기 또는 지우기 (좌클릭 또는 드래그)
-  const fillCell = useCallback((row: number, col: number) => {
+  // skipFilled: true이면 이미 채워진 셀은 건너뜀 (드래그 시 사용)
+  const fillCell = useCallback((row: number, col: number, skipFilled: boolean = false) => {
     if (selectedDice === null) return;
     if (row < 0 || row >= height || col < 0 || col >= width) return;
+
+    // 드래그 중일 때 이미 채워진 셀은 건너뜀 (지우개 모드 제외)
+    if (skipFilled && selectedDice !== 'eraser') {
+      const cellData = cells[row]?.[col];
+      if (cellData?.filledValue !== null) return;
+    }
 
     if (selectedDice === 'eraser') {
       // 지우개 모드: 셀 리셋
@@ -38,9 +45,10 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
       // 주사위 채우기
       onCellUpdate(row, col, selectedDice);
     }
-  }, [selectedDice, height, width, onCellUpdate]);
+  }, [selectedDice, height, width, cells, onCellUpdate]);
 
   // 두 점 사이의 모든 셀을 채우기 (Bresenham's line algorithm)
+  // 드래그 중이므로 이미 채워진 셀은 건너뜀
   const fillLine = useCallback((
     fromRow: number,
     fromCol: number,
@@ -57,7 +65,7 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
     let currentCol = fromCol;
 
     while (true) {
-      fillCell(currentRow, currentCol);
+      fillCell(currentRow, currentCol, true); // skipFilled: true
 
       if (currentRow === toRow && currentCol === toCol) break;
 
@@ -174,7 +182,7 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
           cell.col
         );
       } else {
-        fillCell(cell.row, cell.col);
+        fillCell(cell.row, cell.col, true); // 드래그 중: skipFilled
       }
       lastCellRef.current = cell;
     }
