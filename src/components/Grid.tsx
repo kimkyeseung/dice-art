@@ -32,15 +32,10 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
   // 셀 채우기 (좌클릭 또는 드래그)
   const fillCell = useCallback((row: number, col: number) => {
     if (selectedDice === null) return;
+    if (row < 0 || row >= height || col < 0 || col >= width) return;
 
-    const cell = cells[row]?.[col];
-    if (!cell) return;
-
-    // 이미 채워진 셀도 다른 값으로 덮어쓰기 가능
-    if (cell.filledValue !== selectedDice) {
-      onCellUpdate(row, col, selectedDice);
-    }
-  }, [selectedDice, cells, onCellUpdate]);
+    onCellUpdate(row, col, selectedDice);
+  }, [selectedDice, height, width, onCellUpdate]);
 
   // 두 점 사이의 모든 셀을 채우기 (Bresenham's line algorithm)
   const fillLine = useCallback((
@@ -77,11 +72,10 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
 
   // 셀 리셋 (우클릭)
   const resetCell = useCallback((row: number, col: number) => {
-    const cell = cells[row]?.[col];
-    if (!cell || cell.filledValue === null) return;
+    if (row < 0 || row >= height || col < 0 || col >= width) return;
 
     onCellUpdate(row, col, null);
-  }, [cells, onCellUpdate]);
+  }, [height, width, onCellUpdate]);
 
   // 마우스 좌표에서 셀 인덱스 계산
   const getCellFromPoint = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
