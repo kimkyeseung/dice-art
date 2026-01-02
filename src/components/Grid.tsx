@@ -190,6 +190,7 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
 
   // 포인터 업 (드래그 종료)
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
     // 포인터 캡처 해제
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
@@ -198,6 +199,15 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
     lastCellRef.current = null;
     isLongPressRef.current = false;
   }, [cancelLongPress]);
+
+  // 터치 이벤트 기본 동작 방지 (뒤로 가기 스와이프, 스크롤 등)
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+  }, []);
 
   // 우클릭 (셀 리셋)
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -215,11 +225,16 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
       style={{
         gridTemplateColumns: `repeat(${width}, ${cellSize}px)`,
         gridTemplateRows: `repeat(${height}, ${cellSize}px)`,
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onContextMenu={handleContextMenu}
     >
       {cells.map((row, rowIndex) =>
