@@ -160,65 +160,6 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     }
   }, []);
 
-  // 터치 시작
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const cell = getCellFromPoint(touch.clientX, touch.clientY);
-
-    if (cell) {
-      isLongPressRef.current = false;
-      lastCellRef.current = cell;
-
-      // 길게 누르기 타이머 시작
-      longPressTimerRef.current = setTimeout(() => {
-        isLongPressRef.current = true;
-        resetCell(cell.row, cell.col);
-      }, LONG_PRESS_DURATION);
-
-      // 짧은 탭인 경우 즉시 채우기
-      setIsDragging(true);
-    }
-  }, [getCellFromPoint, resetCell]);
-
-  // 터치 이동
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    // 이동하면 길게 누르기 취소
-    cancelLongPress();
-
-    if (!isDragging || isLongPressRef.current) return;
-
-    const touch = e.touches[0];
-    const cell = getCellFromPoint(touch.clientX, touch.clientY);
-
-    if (cell) {
-      if (lastCellRef.current) {
-        fillLine(
-          lastCellRef.current.row,
-          lastCellRef.current.col,
-          cell.row,
-          cell.col
-        );
-      } else {
-        fillCell(cell.row, cell.col);
-      }
-      lastCellRef.current = cell;
-    }
-  }, [isDragging, getCellFromPoint, fillCell, fillLine, cancelLongPress]);
-
-  // 터치 종료
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    cancelLongPress();
-
-    // 길게 누르기가 아니고 드래그도 아닌 경우 (짧은 탭) → 채우기
-    if (!isLongPressRef.current && lastCellRef.current) {
-      fillCell(lastCellRef.current.row, lastCellRef.current.col);
-    }
-
-    setIsDragging(false);
-    lastCellRef.current = null;
-    isLongPressRef.current = false;
-  }, [fillCell, cancelLongPress]);
-
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
@@ -241,6 +182,76 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isDragging]);
 
+  // 터치 이벤트를 native로 등록 (passive: false로 preventDefault 가능하게)
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const cell = getCellFromPoint(touch.clientX, touch.clientY);
+
+      if (cell) {
+        isLongPressRef.current = false;
+        lastCellRef.current = cell;
+
+        longPressTimerRef.current = setTimeout(() => {
+          isLongPressRef.current = true;
+          resetCell(cell.row, cell.col);
+        }, LONG_PRESS_DURATION);
+
+        setIsDragging(true);
+        fillCell(cell.row, cell.col);
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      cancelLongPress();
+
+      if (isLongPressRef.current) return;
+
+      const touch = e.touches[0];
+      const cell = getCellFromPoint(touch.clientX, touch.clientY);
+
+      if (cell && (
+        !lastCellRef.current ||
+        lastCellRef.current.row !== cell.row ||
+        lastCellRef.current.col !== cell.col
+      )) {
+        if (lastCellRef.current) {
+          fillLine(
+            lastCellRef.current.row,
+            lastCellRef.current.col,
+            cell.row,
+            cell.col
+          );
+        } else {
+          fillCell(cell.row, cell.col);
+        }
+        lastCellRef.current = cell;
+      }
+    };
+
+    const onTouchEnd = () => {
+      cancelLongPress();
+      setIsDragging(false);
+      lastCellRef.current = null;
+      isLongPressRef.current = false;
+    };
+
+    grid.addEventListener('touchstart', onTouchStart, { passive: false });
+    grid.addEventListener('touchmove', onTouchMove, { passive: false });
+    grid.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      grid.removeEventListener('touchstart', onTouchStart);
+      grid.removeEventListener('touchmove', onTouchMove);
+      grid.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [getCellFromPoint, fillCell, fillLine, resetCell, cancelLongPress]);
+
   return (
     <div
       ref={gridRef}
@@ -254,9 +265,6 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
       onContextMenu={handleContextMenu}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {cells.map((row, rowIndex) =>
         row.map((cell, colIndex) => {
