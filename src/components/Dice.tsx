@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { DiceValue } from '@/types';
 
 interface DiceProps {
@@ -43,7 +44,7 @@ const positionClasses: Record<string, string> = {
   b6r: 'bottom-[7%] right-[15%]',
 };
 
-export function Dice({ value, size = 40, className = '', animate = false, showWarning = false }: DiceProps) {
+export const Dice = memo(function Dice({ value, size = 40, className = '', animate = false, showWarning = false }: DiceProps) {
   const dots = dotPositions[value];
   // 주사위 크기에 비례한 눈 크기 (약 30% - 실제 주사위처럼 크게)
   const dotSize = Math.max(Math.round(size * 0.30), 6);
@@ -97,6 +98,6 @@ export function Dice({ value, size = 40, className = '', animate = false, showWa
       )}
     </div>
   );
-}
+});
 
 export default Dice;

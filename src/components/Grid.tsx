@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect, memo } from 'react';
 import { GridState, DiceValue } from '@/types';
 import { Dice } from './Dice';
 import { NumberCell } from './NumberCell';
@@ -17,7 +17,7 @@ interface GridProps {
 
 const LONG_PRESS_DURATION = 500; // 길게 누르기 감지 시간 (ms)
 
-export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false }: GridProps) {
+export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false }: GridProps) {
   const { cells, width, height } = gridState;
   const [isDragging, setIsDragging] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -242,6 +242,6 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
       )}
     </div>
   );
-}
+});
 
 export default Grid;

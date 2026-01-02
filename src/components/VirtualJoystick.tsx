@@ -17,13 +17,21 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
   const knobSize = size * 0.4;
   const maxDistance = (size - knobSize) / 2;
 
-  // 연속 이동을 위한 애니메이션 루프
+  // onMove를 ref로 저장하여 의존성 문제 해결
+  const onMoveRef = useRef(onMove);
   useEffect(() => {
+    onMoveRef.current = onMove;
+  }, [onMove]);
+
+  // 연속 이동을 위한 애니메이션 루프 - isActive일 때만 실행
+  useEffect(() => {
+    if (!isActive) return;
+
     const animate = () => {
-      if (isActive && (lastMoveRef.current.x !== 0 || lastMoveRef.current.y !== 0)) {
+      if (lastMoveRef.current.x !== 0 || lastMoveRef.current.y !== 0) {
         // 속도 조절 (거리에 비례), 방향 반전 (조이스틱 방향 = 스크롤 방향)
         const speed = 8;
-        onMove(
+        onMoveRef.current(
           -lastMoveRef.current.x * speed,
           -lastMoveRef.current.y * speed
         );
@@ -38,7 +46,7 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isActive, onMove]);
+  }, [isActive]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();

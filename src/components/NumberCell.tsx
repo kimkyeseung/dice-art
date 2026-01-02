@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { DiceValue } from '@/types';
 
 interface NumberCellProps {
@@ -8,7 +9,7 @@ interface NumberCellProps {
   className?: string;
 }
 
-export function NumberCell({ value, size = 40, className = '' }: NumberCellProps) {
+export const NumberCell = memo(function NumberCell({ value, size = 40, className = '' }: NumberCellProps) {
   const fontSize = Math.max(Math.round(size * 0.4), 12);
 
   return (
@@ -23,6 +24,6 @@ export function NumberCell({ value, size = 40, className = '' }: NumberCellProps
       {value}
     </div>
   );
-}
+});
 
 export default NumberCell;

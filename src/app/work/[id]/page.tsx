@@ -153,20 +153,23 @@ export default function WorkPage({ params }: WorkPageProps) {
     alert('갤러리에 공유되었습니다!');
   };
 
-  // 셀 업데이트 핸들러
+  // 셀 업데이트 핸들러 - 성능 최적화: 변경된 행만 새로 생성
   const handleCellUpdate = useCallback((row: number, col: number, value: DiceValue | null) => {
     setGridState(prevState => {
       if (!prevState) return null;
 
-      const newCells = prevState.cells.map((r, rIdx) =>
-        rIdx === row
-          ? r.map((c, cIdx) =>
-              cIdx === col
-                ? { ...c, filledValue: value }
-                : c
-            )
-          : r
-      );
+      const currentCell = prevState.cells[row]?.[col];
+      // 값이 같으면 업데이트하지 않음
+      if (currentCell && currentCell.filledValue === value) {
+        return prevState;
+      }
+
+      // 변경된 행만 새로 생성 (shallow copy)
+      const newRow = [...prevState.cells[row]];
+      newRow[col] = { ...newRow[col], filledValue: value };
+
+      const newCells = [...prevState.cells];
+      newCells[row] = newRow;
 
       return {
         ...prevState,
