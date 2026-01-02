@@ -11,6 +11,7 @@ import { processImage, calculateProgress } from '@/utils/imageProcessor';
 import { loadWork, saveWork, deleteWork } from '@/utils/storage';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useZoomPan } from '@/hooks/useZoomPan';
+import { useImageProcessorWorker } from '@/hooks/useImageProcessorWorker';
 import { exportGridAsImage, isGridComplete, renderGridToCanvas } from '@/utils/exportImage';
 
 interface WorkPageProps {
@@ -62,6 +63,9 @@ export default function WorkPage({ params }: WorkPageProps) {
   // 스크롤 컨테이너 ref (모바일 패닝용)
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Web Worker 훅
+  const { processImage: processImageWorker, isSupported: isWorkerSupported } = useImageProcessorWorker();
+
   // 모바일 패닝 핸들러
   const handlePan = useCallback((deltaX: number, deltaY: number) => {
     if (scrollContainerRef.current) {
@@ -84,31 +88,39 @@ export default function WorkPage({ params }: WorkPageProps) {
   }, [workId]);
 
   // 더 높은 해상도로 도전
-  const handleHigherResolution = useCallback(() => {
+  const handleHigherResolution = useCallback(async () => {
     if (!originalImage) return;
 
     const newDimension = maxDimension * 2;
     setIsProcessing(true);
     setMaxDimension(newDimension);
 
-    const img = new Image();
-    img.onload = () => {
-      setTimeout(() => {
-        try {
-          const grid = processImage(img, newDimension);
-          setGridState(grid);
-          setSelectedDice(null);
-          // 새 그리드로 저장
-          saveWork(workId, grid, originalImage);
-        } catch (error) {
-          console.error('이미지 처리 실패:', error);
-        } finally {
-          setIsProcessing(false);
+    const img = new window.Image();
+    img.onload = async () => {
+      try {
+        let grid;
+
+        if (isWorkerSupported) {
+          // Web Worker로 처리 (UI 블로킹 없음)
+          grid = await processImageWorker(img, newDimension);
+        } else {
+          // Fallback: 메인 스레드에서 처리
+          await new Promise(resolve => setTimeout(resolve, 100));
+          grid = processImage(img, newDimension);
         }
-      }, 100);
+
+        setGridState(grid);
+        setSelectedDice(null);
+        // 새 그리드로 저장
+        saveWork(workId, grid, originalImage);
+      } catch (error) {
+        console.error('이미지 처리 실패:', error);
+      } finally {
+        setIsProcessing(false);
+      }
     };
     img.src = originalImage;
-  }, [originalImage, maxDimension, workId]);
+  }, [originalImage, maxDimension, workId, isWorkerSupported, processImageWorker]);
 
   // 작업 삭제 및 홈으로 이동
   const handleDelete = () => {
@@ -447,6 +459,7 @@ export default function WorkPage({ params }: WorkPageProps) {
                     onCellUpdate={handleCellUpdate}
                     scale={scale}
                     showMismatch={showMismatch}
+                    scrollContainerRef={scrollContainerRef}
                   />
                 </div>
               </div>
