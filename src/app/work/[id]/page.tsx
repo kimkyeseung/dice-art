@@ -3,8 +3,7 @@
 import { useState, useCallback, useEffect, use, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, ModeToggle } from '@/components';
-import type { GridMode } from '@/components';
+import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, VirtualJoystick } from '@/components';
 import { useUser } from '@/contexts/UserContext';
 import { GridState, DiceValue } from '@/types';
 import { processImage, calculateProgress } from '@/utils/imageProcessor';
@@ -35,8 +34,6 @@ export default function WorkPage({ params }: WorkPageProps) {
   // 틀린 값 표시 상태
   const [showMismatch, setShowMismatch] = useState(false);
 
-  // 모바일 모드 (채우기 / 이동)
-  const [gridMode, setGridMode] = useState<GridMode>('fill');
 
   // 사용자 상태
   const { user, setNickname } = useUser();
@@ -383,17 +380,14 @@ export default function WorkPage({ params }: WorkPageProps) {
               </div>
             )}
 
-            {/* 컨트롤 바 (모드 토글, 줌, 틀린값 표시) */}
+            {/* 컨트롤 바 (줌, 틀린값 표시) */}
             <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <ModeToggle mode={gridMode} onModeChange={setGridMode} />
-                <Switch
-                  checked={showMismatch}
-                  onChange={setShowMismatch}
-                  label="틀린 값 표시"
-                  size="sm"
-                />
-              </div>
+              <Switch
+                checked={showMismatch}
+                onChange={setShowMismatch}
+                label="틀린 값 표시"
+                size="sm"
+              />
               <ZoomControls
                 scale={scale}
                 onZoomIn={zoomIn}
@@ -428,8 +422,6 @@ export default function WorkPage({ params }: WorkPageProps) {
                     onCellUpdate={handleCellUpdate}
                     scale={scale}
                     showMismatch={showMismatch}
-                    mode={gridMode}
-                    onPan={handlePan}
                   />
                 </div>
               </div>
@@ -440,12 +432,22 @@ export default function WorkPage({ params }: WorkPageProps) {
               </p>
             </div>
 
-            {/* 팔레트 (하단 고정) - 이동 모드에서는 모바일에서만 숨김 */}
-            <div className={`sticky bottom-2 sm:bottom-4 ${gridMode === 'pan' ? 'hidden sm:block' : ''}`}>
-              <DicePalette
-                selectedValue={selectedDice}
-                onSelect={setSelectedDice}
-              />
+            {/* 하단 컨트롤: 조이스틱(모바일) + 팔레트 */}
+            <div className="sticky bottom-2 sm:bottom-4 flex items-end gap-2">
+              {/* 조이스틱 - 모바일에서만 표시 */}
+              <div className="sm:hidden flex-shrink-0">
+                <VirtualJoystick
+                  onMove={handlePan}
+                  size={80}
+                />
+              </div>
+              {/* 팔레트 */}
+              <div className="flex-1">
+                <DicePalette
+                  selectedValue={selectedDice}
+                  onSelect={setSelectedDice}
+                />
+              </div>
             </div>
           </div>
         )}
