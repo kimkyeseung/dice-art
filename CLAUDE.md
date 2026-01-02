@@ -14,6 +14,8 @@ This project is inspired by the amazing dice artwork of [@anna.dice.artworks](ht
 npm run dev      # Start development server (http://localhost:3000)
 npm run build    # Production build
 npm run lint     # ESLint
+npm test         # Run Jest unit tests
+npm run test:e2e # Run Playwright E2E tests
 npx prisma db push       # Push schema changes to database
 npx prisma generate      # Regenerate Prisma client
 npx prisma studio        # Open Prisma database GUI
@@ -31,7 +33,7 @@ npx prisma studio        # Open Prisma database GUI
 
 ### Core Data Flow
 
-1. **Image Processing** (`src/utils/imageProcessor.ts`): Uploaded images are scaled to a grid (default 50 cells on longest side), and each pixel's luminance is mapped to a DiceValue (1-6) using ITU-R BT.601 standard
+1. **Image Processing** (`src/utils/imageProcessor.ts`): Uploaded images are scaled to a grid (default 50 cells on longest side), and each pixel's luminance is mapped to a DiceValue (0-6) using ITU-R BT.601 standard
 2. **Grid State** (`src/types/index.ts`): `GridState` contains a 2D array of `CellState`, each with `targetValue` (what to fill) and `filledValue` (user's input)
 3. **Persistence**: Work-in-progress saved to localStorage (`src/utils/storage.ts`) with UUID-based multi-work support, completed artworks saved to PostgreSQL via Prisma
 
@@ -52,9 +54,10 @@ Key functions in `src/utils/storage.ts`:
 ### Key Components
 
 - **ImageUploader** (`src/components/ImageUploader.tsx`): Handles image upload via drag-and-drop or file selection. Also provides 4 Unsplash preset images for quick start
-- **Grid** (`src/components/Grid.tsx`): Main interactive canvas. Handles mouse/touch drag painting with Bresenham's line algorithm for smooth strokes. Left-click fills, right-click/long-press clears
+- **Grid** (`src/components/Grid.tsx`): Main interactive canvas. Handles mouse/touch drag painting with Bresenham's line algorithm for smooth strokes. Left-click fills, right-click/long-press clears. Uses pointer events for unified mouse/touch handling
 - **Dice/NumberCell**: Render filled dice or target number respectively
-- **DicePalette**: Bottom toolbar for selecting dice value (1-6), also keyboard shortcut 1-6
+- **DicePalette** (`src/components/DicePalette.tsx`): Bottom toolbar for selecting dice value (0-6) or eraser. Keyboard shortcuts: 0-6 for dice, E for eraser. Mobile layout uses 2 rows (4+4), desktop uses single row
+- **VirtualJoystick** (`src/components/VirtualJoystick.tsx`): Mobile-only joystick for panning the grid view. Uses pointer events and requestAnimationFrame for smooth continuous movement
 
 ### State Management
 
@@ -87,9 +90,25 @@ PostgreSQL (Neon) with Prisma ORM. Single `Artwork` model stores gridState as JS
 
 `@/*` maps to `./src/*` (configured in tsconfig.json)
 
+## Testing
+
+### Unit Tests (Jest)
+- Located in `src/__tests__/` directory
+- Uses `@testing-library/react` for component testing
+- Run with `npm test`
+
+### E2E Tests (Playwright)
+- Located in `e2e/` directory
+- `desktop.spec.ts` - Desktop browser tests
+- `mobile-touch.spec.ts` - Mobile touch interaction tests (single finger drag, two-finger pan, long press, eraser, joystick)
+- Uses CDP (Chrome DevTools Protocol) for precise touch event simulation
+- Run with `npm run test:e2e`
+
 ## Notes
 
 - UI language is Korean
 - The app uses a custom `dice-pop` animation for visual feedback when placing dice
 - Export renders dice at 60px cell size with 2px gap
 - Unsplash images are fetched directly without API key using public image URLs
+- DiceValue type is `0 | 1 | 2 | 3 | 4 | 5 | 6` (includes 0 for blank dice)
+- PaletteValue type is `DiceValue | 'eraser'` for palette selection
