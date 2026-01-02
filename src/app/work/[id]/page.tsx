@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback, useEffect, use } from 'react';
+import { useState, useCallback, useEffect, use, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog } from '@/components';
+import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, ModeToggle } from '@/components';
+import type { GridMode } from '@/components';
 import { useUser } from '@/contexts/UserContext';
 import { GridState, DiceValue } from '@/types';
 import { processImage, calculateProgress } from '@/utils/imageProcessor';
@@ -34,6 +35,9 @@ export default function WorkPage({ params }: WorkPageProps) {
   // 틀린 값 표시 상태
   const [showMismatch, setShowMismatch] = useState(false);
 
+  // 모바일 모드 (채우기 / 이동)
+  const [gridMode, setGridMode] = useState<GridMode>('fill');
+
   // 사용자 상태
   const { user, setNickname } = useUser();
   const [showNicknameDialog, setShowNicknameDialog] = useState(false);
@@ -56,6 +60,17 @@ export default function WorkPage({ params }: WorkPageProps) {
     zoomOut,
     resetZoom,
   } = useZoomPan({ minScale: 0.5, maxScale: 3, initialScale: 1 });
+
+  // 스크롤 컨테이너 ref (모바일 패닝용)
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 모바일 패닝 핸들러
+  const handlePan = useCallback((deltaX: number, deltaY: number) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft -= deltaX;
+      scrollContainerRef.current.scrollTop -= deltaY;
+    }
+  }, []);
 
   // 저장된 작업 불러오기
   useEffect(() => {
@@ -352,14 +367,17 @@ export default function WorkPage({ params }: WorkPageProps) {
               </div>
             )}
 
-            {/* 컨트롤 바 (줌, 틀린값 표시) */}
+            {/* 컨트롤 바 (모드 토글, 줌, 틀린값 표시) */}
             <div className="flex items-center justify-between gap-2 mb-2">
-              <Switch
-                checked={showMismatch}
-                onChange={setShowMismatch}
-                label="틀린 값 표시"
-                size="sm"
-              />
+              <div className="flex items-center gap-2">
+                <ModeToggle mode={gridMode} onModeChange={setGridMode} />
+                <Switch
+                  checked={showMismatch}
+                  onChange={setShowMismatch}
+                  label="틀린 값 표시"
+                  size="sm"
+                />
+              </div>
               <ZoomControls
                 scale={scale}
                 onZoomIn={zoomIn}
@@ -373,7 +391,11 @@ export default function WorkPage({ params }: WorkPageProps) {
             {/* 그리드 영역 */}
             <div className="relative">
               <div
-                ref={containerRef}
+                ref={(el) => {
+                  // 두 ref를 모두 연결
+                  if (containerRef) (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+                  (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+                }}
                 className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-6 shadow-sm overflow-auto"
                 style={{ maxHeight: 'calc(100vh - 340px)', minHeight: '300px' }}
               >
@@ -390,6 +412,8 @@ export default function WorkPage({ params }: WorkPageProps) {
                     onCellUpdate={handleCellUpdate}
                     scale={scale}
                     showMismatch={showMismatch}
+                    mode={gridMode}
+                    onPan={handlePan}
                   />
                 </div>
               </div>

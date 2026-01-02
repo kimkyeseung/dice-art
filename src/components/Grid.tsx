@@ -5,6 +5,8 @@ import { GridState, DiceValue } from '@/types';
 import { Dice } from './Dice';
 import { NumberCell } from './NumberCell';
 
+export type GridMode = 'fill' | 'pan';
+
 interface GridProps {
   gridState: GridState;
   cellSize?: number;
@@ -12,17 +14,20 @@ interface GridProps {
   onCellUpdate: (row: number, col: number, value: DiceValue | null) => void;
   scale?: number; // 줌 스케일
   showMismatch?: boolean; // 틀린 값 표시
+  mode?: GridMode; // 모바일 모드: 'fill' (주사위 채우기) | 'pan' (영역 이동)
+  onPan?: (deltaX: number, deltaY: number) => void; // 패닝 콜백
 }
 
 const LONG_PRESS_DURATION = 500; // 길게 누르기 감지 시간 (ms)
 
-export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false }: GridProps) {
+export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false, mode = 'fill', onPan }: GridProps) {
   const { cells, width, height } = gridState;
   const [isDragging, setIsDragging] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastCellRef = useRef<{ row: number; col: number } | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
 
   // 셀 채우기 (좌클릭 또는 드래그)
   const fillCell = useCallback((row: number, col: number) => {
@@ -188,8 +193,16 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     if (!grid) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      e.preventDefault();
       const touch = e.touches[0];
+
+      // 이동 모드: 스크롤 준비
+      if (mode === 'pan') {
+        lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+        return; // 기본 동작 허용하지 않음 (스크롤은 onTouchMove에서 처리)
+      }
+
+      // 채우기 모드
+      e.preventDefault();
       const cell = getCellFromPoint(touch.clientX, touch.clientY);
 
       if (cell) {
@@ -207,12 +220,26 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+
+      // 이동 모드: 스크롤 처리
+      if (mode === 'pan') {
+        if (lastTouchRef.current && onPan) {
+          const deltaX = touch.clientX - lastTouchRef.current.x;
+          const deltaY = touch.clientY - lastTouchRef.current.y;
+          onPan(deltaX, deltaY);
+        }
+        lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+        e.preventDefault();
+        return;
+      }
+
+      // 채우기 모드
       e.preventDefault();
       cancelLongPress();
 
       if (isLongPressRef.current) return;
 
-      const touch = e.touches[0];
       const cell = getCellFromPoint(touch.clientX, touch.clientY);
 
       if (cell && (
@@ -235,6 +262,13 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     };
 
     const onTouchEnd = () => {
+      // 이동 모드
+      if (mode === 'pan') {
+        lastTouchRef.current = null;
+        return;
+      }
+
+      // 채우기 모드
       cancelLongPress();
       setIsDragging(false);
       lastCellRef.current = null;
@@ -250,12 +284,12 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
       grid.removeEventListener('touchmove', onTouchMove);
       grid.removeEventListener('touchend', onTouchEnd);
     };
-  }, [getCellFromPoint, fillCell, fillLine, resetCell, cancelLongPress]);
+  }, [getCellFromPoint, fillCell, fillLine, resetCell, cancelLongPress, mode, onPan]);
 
   return (
     <div
       ref={gridRef}
-      className="inline-grid bg-neutral-300 gap-px p-px no-select cursor-crosshair touch-none"
+      className={`inline-grid bg-neutral-300 gap-px p-px no-select touch-none ${mode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
       style={{
         gridTemplateColumns: `repeat(${width}, ${cellSize}px)`,
         gridTemplateRows: `repeat(${height}, ${cellSize}px)`,
