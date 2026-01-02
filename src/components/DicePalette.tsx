@@ -45,43 +45,63 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
     </button>
   );
 
-  const renderEraserButton = () => (
-    <button
-      key="eraser"
-      data-testid="dice-button-eraser"
-      onClick={() => onSelect('eraser')}
-      className={`
-        p-1 sm:p-2 rounded-lg transition-all duration-150
-        hover:bg-red-100 hover:scale-105
-        focus:outline-none focus:ring-2 focus:ring-red-400
-        active:scale-95
-        ${selectedValue === 'eraser'
-          ? 'bg-red-100 ring-2 ring-red-500 scale-110'
-          : 'bg-transparent'
-        }
-      `}
-      title="지우개 (단축키: E)"
-    >
-      <div className="scale-75 sm:scale-100 w-12 h-12 flex items-center justify-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="32"
-          height="32"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-red-500"
-        >
-          <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
-          <path d="M22 21H7" />
-          <path d="m5 11 9 9" />
-        </svg>
-      </div>
-    </button>
-  );
+  const renderEraserButton = () => {
+    const size = 48;
+    const borderRadius = Math.round(size * 0.15);
+
+    return (
+      <button
+        key="eraser"
+        data-testid="dice-button-eraser"
+        onClick={() => onSelect('eraser')}
+        className={`
+          p-1 sm:p-2 rounded-lg transition-all duration-150
+          hover:bg-neutral-200 hover:scale-105
+          focus:outline-none focus:ring-2 focus:ring-blue-400
+          active:scale-95
+          ${selectedValue === 'eraser'
+            ? 'bg-blue-100 ring-2 ring-blue-500 scale-110'
+            : 'bg-transparent'
+          }
+        `}
+        title="지우개 (단축키: E)"
+      >
+        <div className="scale-75 sm:scale-100">
+          {/* 주사위와 동일한 스타일의 박스 */}
+          <div
+            className="relative bg-neutral-900 flex items-center justify-center"
+            style={{
+              width: size,
+              height: size,
+              borderRadius: borderRadius,
+              boxShadow: `
+                inset 1px 1px 2px rgba(255,255,255,0.1),
+                inset -1px -1px 2px rgba(0,0,0,0.3),
+                0 2px 4px rgba(0,0,0,0.3)
+              `,
+            }}
+          >
+            {/* 흰색 지우개 아이콘 */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+              <path d="M22 21H7" />
+              <path d="m5 11 9 9" />
+            </svg>
+          </div>
+        </div>
+      </button>
+    );
+  };
 
   return (
     <fieldset className="border-2 border-neutral-300 rounded-lg p-2 sm:p-4 bg-neutral-100/95 backdrop-blur-sm">
