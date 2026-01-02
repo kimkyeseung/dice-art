@@ -225,55 +225,61 @@ export default function WorkPage({ params }: WorkPageProps) {
     <div className="min-h-screen bg-neutral-100">
       {/* 헤더 */}
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-4">
           <div className="flex items-center justify-between">
+            {/* 왼쪽: 로고 + 네비게이션 (데스크탑) */}
             <div className="flex items-center gap-2 sm:gap-4">
               <Link href="/" className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-neutral-800">Dice Art</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-neutral-800">Dice<br className="sm:hidden" /> Art</h1>
               </Link>
-              <Link
-                href="/gallery"
-                className="px-3 py-1.5 text-xs sm:text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-              >
-                갤러리
-              </Link>
-              <Link
-                href="/my-works"
-                className="px-3 py-1.5 text-xs sm:text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-              >
-                내 작업
-              </Link>
-              {user ? (
-                <button
-                  onClick={() => setShowNicknameDialog(true)}
-                  className="px-3 py-1.5 text-xs sm:text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+              {/* 데스크탑 네비게이션 */}
+              <nav className="hidden sm:flex items-center gap-2">
+                <Link
+                  href="/gallery"
+                  className="px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
                 >
-                  {user.nickname}
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowNicknameDialog(true)}
-                  className="px-3 py-1.5 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  갤러리
+                </Link>
+                <Link
+                  href="/my-works"
+                  className="px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
                 >
-                  닉네임 설정
-                </button>
-              )}
+                  내 작업
+                </Link>
+                {user ? (
+                  <button
+                    onClick={() => setShowNicknameDialog(true)}
+                    className="px-3 py-1.5 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+                  >
+                    {user.nickname}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowNicknameDialog(true)}
+                    className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    닉네임 설정
+                  </button>
+                )}
+              </nav>
             </div>
+
+            {/* 오른쪽: 진행률 + 액션 버튼들 */}
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               {/* 진행률 */}
-              <div className="text-xs sm:text-sm text-neutral-600">
-                <span className="hidden sm:inline">진행률: </span>
-                <span className={`font-bold ${isComplete ? 'text-green-600' : 'text-blue-600'}`}>{progress}%</span>
-              </div>
-              {/* 그리드 크기 */}
+              <span className={`text-sm sm:text-base font-bold ${isComplete ? 'text-green-600' : 'text-blue-600'}`}>
+                {progress}%
+              </span>
+              {/* 그리드 크기 - 데스크탑만 */}
               <div className="text-sm text-neutral-500 hidden md:block">
                 {gridState.width} × {gridState.height} = {gridState.width * gridState.height}칸
               </div>
               {/* 버튼들 */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
+                {/* 다운로드 - 완료 시에만 활성화 */}
                 <button
                   onClick={handleDownload}
-                  className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg transition-colors ${
+                  className={`p-2 sm:px-4 sm:py-2 text-sm rounded-lg transition-colors ${
                     isComplete
                       ? 'bg-green-500 hover:bg-green-600 text-white'
                       : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
@@ -282,21 +288,31 @@ export default function WorkPage({ params }: WorkPageProps) {
                   title={isComplete ? '이미지 다운로드' : '모든 칸을 채워야 다운로드할 수 있습니다'}
                 >
                   <span className="hidden sm:inline">다운로드</span>
-                  <span className="sm:hidden">↓</span>
+                  <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
                 </button>
+                {/* 저장 */}
                 <button
                   onClick={handleManualSave}
-                  className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  className="p-2 sm:px-4 sm:py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  title="저장"
                 >
                   <span className="hidden sm:inline">저장</span>
-                  <span className="sm:hidden">💾</span>
+                  <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
                 </button>
+                {/* 삭제 */}
                 <button
                   onClick={handleDelete}
-                  className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-neutral-200 hover:bg-neutral-300 rounded-lg transition-colors"
+                  className="p-2 sm:px-4 sm:py-2 text-sm bg-neutral-200 hover:bg-neutral-300 text-neutral-600 rounded-lg transition-colors"
+                  title="삭제"
                 >
                   <span className="hidden sm:inline">삭제</span>
-                  <span className="sm:hidden">✕</span>
+                  <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             </div>
