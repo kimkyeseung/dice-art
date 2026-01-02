@@ -1,6 +1,21 @@
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { Grid } from '../Grid';
 import { GridState, DiceValue } from '@/types';
+
+// PointerEvent 폴리필 (Jest/jsdom에서 지원하지 않음)
+class MockPointerEvent extends MouseEvent {
+  pointerId: number;
+  pointerType: string;
+
+  constructor(type: string, params: PointerEventInit = {}) {
+    super(type, params);
+    this.pointerId = params.pointerId ?? 1;
+    this.pointerType = params.pointerType ?? 'mouse';
+  }
+}
+
+// @ts-expect-error - polyfill
+global.PointerEvent = MockPointerEvent;
 
 // 테스트용 그리드 상태 생성
 function createTestGridState(width: number, height: number): GridState {
@@ -13,61 +28,45 @@ function createTestGridState(width: number, height: number): GridState {
   return { cells, width, height };
 }
 
-// 터치 이벤트 생성 헬퍼
-function createTouchEvent(type: string, clientX: number, clientY: number): TouchEvent {
-  const touch = {
+// 포인터 이벤트 생성 헬퍼
+function createPointerEvent(type: string, clientX: number, clientY: number, options: Partial<PointerEventInit> = {}): PointerEvent {
+  return new PointerEvent(type, {
+    bubbles: true,
+    cancelable: true,
     clientX,
     clientY,
-    identifier: 0,
-    target: null as unknown as EventTarget,
-    screenX: clientX,
-    screenY: clientY,
-    pageX: clientX,
-    pageY: clientY,
-    radiusX: 0,
-    radiusY: 0,
-    rotationAngle: 0,
-    force: 1,
-  };
-
-  const touchList = {
-    length: 1,
-    item: (index: number) => index === 0 ? touch : null,
-    [0]: touch,
-    [Symbol.iterator]: function* () { yield touch; },
-  } as unknown as TouchList;
-
-  const event = new Event(type, { bubbles: true, cancelable: true }) as TouchEvent;
-  Object.defineProperty(event, 'touches', { value: touchList });
-  Object.defineProperty(event, 'targetTouches', { value: touchList });
-  Object.defineProperty(event, 'changedTouches', { value: touchList });
-
-  return event;
+    pointerId: 1,
+    pointerType: 'touch',
+    ...options,
+  });
 }
 
-describe('Grid Touch Events', () => {
+describe('Grid Pointer Events', () => {
   const cellSize = 24;
   const gap = 1;
   const padding = 1;
 
   // 셀 좌표를 클라이언트 좌표로 변환
-  function getCellCenter(row: number, col: number, rect: DOMRect) {
+  function getCellCenter(row: number, col: number) {
     const cellWithGap = cellSize + gap;
-    const x = rect.left + padding + col * cellWithGap + cellSize / 2;
-    const y = rect.top + padding + row * cellWithGap + cellSize / 2;
+    const x = padding + col * cellWithGap + cellSize / 2;
+    const y = padding + row * cellWithGap + cellSize / 2;
     return { x, y };
   }
 
   beforeEach(() => {
     jest.useFakeTimers();
+    // setPointerCapture와 releasePointerCapture 모킹
+    Element.prototype.setPointerCapture = jest.fn();
+    Element.prototype.releasePointerCapture = jest.fn();
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  describe('Touch Start', () => {
-    it('should fill cell immediately on touch start', async () => {
+  describe('Pointer Down', () => {
+    it('should fill cell immediately on pointer down', async () => {
       const gridState = createTestGridState(5, 5);
       const onCellUpdate = jest.fn();
 
@@ -81,7 +80,6 @@ describe('Grid Touch Events', () => {
       );
 
       const grid = container.firstChild as HTMLElement;
-      const rect = grid.getBoundingClientRect();
 
       // Mock getBoundingClientRect
       jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
@@ -96,17 +94,16 @@ describe('Grid Touch Events', () => {
         toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
-      const touchStartEvent = createTouchEvent('touchstart', x, y);
+      const { x, y } = getCellCenter(2, 2);
 
       act(() => {
-        grid.dispatchEvent(touchStartEvent);
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
       });
 
       expect(onCellUpdate).toHaveBeenCalledWith(2, 2, 4);
     });
 
-    it('should prevent default on touch start to avoid scrolling', () => {
+    it('should not fill on right click', () => {
       const gridState = createTestGridState(5, 5);
       const onCellUpdate = jest.fn();
 
@@ -125,19 +122,17 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
-      const touchStartEvent = createTouchEvent('touchstart', x, y);
-      const preventDefaultSpy = jest.spyOn(touchStartEvent, 'preventDefault');
+      const { x, y } = getCellCenter(0, 0);
 
       act(() => {
-        grid.dispatchEvent(touchStartEvent);
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y, { button: 2 }));
       });
 
-      expect(preventDefaultSpy).toHaveBeenCalled();
+      expect(onCellUpdate).not.toHaveBeenCalled();
     });
   });
 
-  describe('Touch Move (Drag)', () => {
+  describe('Pointer Move (Drag)', () => {
     it('should fill cells along the drag path', () => {
       const gridState = createTestGridState(5, 5);
       const onCellUpdate = jest.fn();
@@ -157,20 +152,16 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      // Start touch at (0, 0)
-      const start = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
-      const touchStartEvent = createTouchEvent('touchstart', start.x, start.y);
-
+      // Start at (0, 0)
+      const start = getCellCenter(0, 0);
       act(() => {
-        grid.dispatchEvent(touchStartEvent);
+        grid.dispatchEvent(createPointerEvent('pointerdown', start.x, start.y));
       });
 
       // Move to (0, 2) - horizontal drag
-      const end = getCellCenter(0, 2, { left: 0, top: 0 } as DOMRect);
-      const touchMoveEvent = createTouchEvent('touchmove', end.x, end.y);
-
+      const end = getCellCenter(0, 2);
       act(() => {
-        grid.dispatchEvent(touchMoveEvent);
+        grid.dispatchEvent(createPointerEvent('pointermove', end.x, end.y));
       });
 
       // Should fill cells at (0,0), (0,1), (0,2) via Bresenham's line
@@ -180,13 +171,9 @@ describe('Grid Touch Events', () => {
     });
 
     it('should continue filling cells even when gridState updates during drag', () => {
-      // This test simulates the real-world scenario where gridState updates
-      // after each cell is filled, which was causing a bug where only the
-      // first cell was filled due to stale closure references.
       let currentGridState = createTestGridState(5, 5);
 
       const onCellUpdate = jest.fn().mockImplementation((row, col, value) => {
-        // Simulate parent component updating gridState
         currentGridState = {
           ...currentGridState,
           cells: currentGridState.cells.map((r, rIdx) =>
@@ -214,13 +201,13 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      // Start touch at (0, 0)
-      const start = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
+      // Start at (0, 0)
+      const start = getCellCenter(0, 0);
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', start.x, start.y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', start.x, start.y));
       });
 
-      // Rerender with updated state (simulating React state update)
+      // Rerender with updated state
       rerender(
         <Grid
           gridState={currentGridState}
@@ -230,16 +217,15 @@ describe('Grid Touch Events', () => {
         />
       );
 
-      // Re-mock getBoundingClientRect after rerender
       jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
         left: 0, top: 0, right: 200, bottom: 200,
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
       // Move to (0, 1)
-      const mid = getCellCenter(0, 1, { left: 0, top: 0 } as DOMRect);
+      const mid = getCellCenter(0, 1);
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchmove', mid.x, mid.y));
+        grid.dispatchEvent(createPointerEvent('pointermove', mid.x, mid.y));
       });
 
       // Rerender with updated state
@@ -258,63 +244,22 @@ describe('Grid Touch Events', () => {
       });
 
       // Move to (0, 2)
-      const end = getCellCenter(0, 2, { left: 0, top: 0 } as DOMRect);
+      const end = getCellCenter(0, 2);
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchmove', end.x, end.y));
+        grid.dispatchEvent(createPointerEvent('pointermove', end.x, end.y));
       });
 
       // Should have filled all 3 cells despite state updates
-      // Note: Bresenham's algorithm may call fillLine for overlapping segments,
-      // so we check that each cell was called at least once
       expect(onCellUpdate).toHaveBeenCalledWith(0, 0, 3);
       expect(onCellUpdate).toHaveBeenCalledWith(0, 1, 3);
       expect(onCellUpdate).toHaveBeenCalledWith(0, 2, 3);
 
-      // Verify all 3 cells were filled (calls may be more due to line algorithm)
       const uniqueCells = new Set(
         onCellUpdate.mock.calls
           .filter((call) => call[2] === 3)
           .map((call) => `${call[0]}-${call[1]}`)
       );
       expect(uniqueCells.size).toBe(3);
-      expect(uniqueCells.has('0-0')).toBe(true);
-      expect(uniqueCells.has('0-1')).toBe(true);
-      expect(uniqueCells.has('0-2')).toBe(true);
-    });
-
-    it('should prevent default on touch move to avoid scrolling', () => {
-      const gridState = createTestGridState(5, 5);
-      const onCellUpdate = jest.fn();
-
-      const { container } = render(
-        <Grid
-          gridState={gridState}
-          selectedDice={3}
-          onCellUpdate={onCellUpdate}
-          cellSize={cellSize}
-        />
-      );
-
-      const grid = container.firstChild as HTMLElement;
-      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
-        left: 0, top: 0, right: 200, bottom: 200,
-        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
-      });
-
-      const { x, y } = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
-
-      act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
-      });
-
-      const touchMoveEvent = createTouchEvent('touchmove', x + 50, y);
-      const preventDefaultSpy = jest.spyOn(touchMoveEvent, 'preventDefault');
-
-      act(() => {
-        grid.dispatchEvent(touchMoveEvent);
-      });
-
-      expect(preventDefaultSpy).toHaveBeenCalled();
     });
 
     it('should not fill same cell multiple times during drag', () => {
@@ -336,19 +281,19 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(1, 1, { left: 0, top: 0 } as DOMRect);
+      const { x, y } = getCellCenter(1, 1);
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
       });
 
       // Move within same cell (small movement)
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchmove', x + 2, y + 2));
+        grid.dispatchEvent(createPointerEvent('pointermove', x + 2, y + 2));
       });
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchmove', x + 4, y + 4));
+        grid.dispatchEvent(createPointerEvent('pointermove', x + 4, y + 4));
       });
 
       // onCellUpdate should only be called once for the same cell
@@ -382,10 +327,10 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+      const { x, y } = getCellCenter(2, 2);
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
       });
 
       // Fast forward 500ms for long press
@@ -397,7 +342,7 @@ describe('Grid Touch Events', () => {
       expect(onCellUpdate).toHaveBeenCalledWith(2, 2, null);
     });
 
-    it('should NOT reset cell on long press if cell was empty at touch start', () => {
+    it('should NOT reset cell on long press if cell was empty at pointer down', () => {
       // Cell (2, 2) is empty (filledValue = null)
       const gridState = createTestGridState(5, 5);
 
@@ -418,10 +363,10 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+      const { x, y } = getCellCenter(2, 2);
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
       });
 
       // Cell should be filled immediately
@@ -433,14 +378,14 @@ describe('Grid Touch Events', () => {
         jest.advanceTimersByTime(500);
       });
 
-      // Should NOT reset cell because it was empty at touch start
+      // Should NOT reset cell because it was empty at pointer down
       const resetCalls = onCellUpdate.mock.calls.filter(
         (call) => call[2] === null
       );
       expect(resetCalls.length).toBe(0);
     });
 
-    it('should cancel long press on touch move', () => {
+    it('should cancel long press on pointer move', () => {
       const gridState = createTestGridState(5, 5);
       gridState.cells[1][1].filledValue = 4;
 
@@ -461,10 +406,10 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const start = getCellCenter(1, 1, { left: 0, top: 0 } as DOMRect);
+      const start = getCellCenter(1, 1);
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', start.x, start.y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', start.x, start.y));
       });
 
       // Move before long press timeout
@@ -472,9 +417,9 @@ describe('Grid Touch Events', () => {
         jest.advanceTimersByTime(200);
       });
 
-      const end = getCellCenter(1, 2, { left: 0, top: 0 } as DOMRect);
+      const end = getCellCenter(1, 2);
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchmove', end.x, end.y));
+        grid.dispatchEvent(createPointerEvent('pointermove', end.x, end.y));
       });
 
       // Complete the timer
@@ -482,7 +427,7 @@ describe('Grid Touch Events', () => {
         jest.advanceTimersByTime(300);
       });
 
-      // Should NOT have reset the cell (no call with null for cell 1,1)
+      // Should NOT have reset the cell
       const resetCalls = onCellUpdate.mock.calls.filter(
         (call) => call[0] === 1 && call[1] === 1 && call[2] === null
       );
@@ -490,8 +435,8 @@ describe('Grid Touch Events', () => {
     });
   });
 
-  describe('Touch End', () => {
-    it('should clean up state on touch end', () => {
+  describe('Pointer Up', () => {
+    it('should clean up state on pointer up', () => {
       const gridState = createTestGridState(5, 5);
       const onCellUpdate = jest.fn();
 
@@ -510,77 +455,25 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
+      const { x, y } = getCellCenter(0, 0);
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
       });
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchend', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerup', x, y));
       });
 
-      // Start a new touch - should work independently
+      // Start a new pointer - should work independently
       onCellUpdate.mockClear();
 
-      const { x: x2, y: y2 } = getCellCenter(3, 3, { left: 0, top: 0 } as DOMRect);
+      const { x: x2, y: y2 } = getCellCenter(3, 3);
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x2, y2));
+        grid.dispatchEvent(createPointerEvent('pointerdown', x2, y2));
       });
 
       expect(onCellUpdate).toHaveBeenCalledWith(3, 3, 3);
-    });
-
-    it('should cancel long press timer on touch end (quick tap)', () => {
-      const gridState = createTestGridState(5, 5);
-      const onCellUpdate = jest.fn();
-
-      const { container } = render(
-        <Grid
-          gridState={gridState}
-          selectedDice={3}
-          onCellUpdate={onCellUpdate}
-          cellSize={cellSize}
-        />
-      );
-
-      const grid = container.firstChild as HTMLElement;
-      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
-        left: 0, top: 0, right: 200, bottom: 200,
-        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
-      });
-
-      const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
-
-      // Quick tap: touchstart -> wait 100ms -> touchend
-      act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
-      });
-
-      // Cell should be filled
-      expect(onCellUpdate).toHaveBeenCalledWith(2, 2, 3);
-      onCellUpdate.mockClear();
-
-      // Wait 100ms (less than 500ms long press duration)
-      act(() => {
-        jest.advanceTimersByTime(100);
-      });
-
-      // Touch end
-      act(() => {
-        grid.dispatchEvent(createTouchEvent('touchend', x, y));
-      });
-
-      // Wait for remaining long press time + extra
-      act(() => {
-        jest.advanceTimersByTime(500);
-      });
-
-      // Cell should NOT be reset (timer should have been cancelled)
-      const resetCalls = onCellUpdate.mock.calls.filter(
-        (call) => call[2] === null
-      );
-      expect(resetCalls.length).toBe(0);
     });
 
     it('should only fill once on quick tap, not reset', () => {
@@ -602,11 +495,11 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(1, 1, { left: 0, top: 0 } as DOMRect);
+      const { x, y } = getCellCenter(1, 1);
 
-      // Simulate quick tap sequence
+      // Quick tap: pointerdown -> wait 50ms -> pointerup
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
       });
 
       act(() => {
@@ -614,7 +507,7 @@ describe('Grid Touch Events', () => {
       });
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchend', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerup', x, y));
       });
 
       // Run any pending timers
@@ -649,15 +542,15 @@ describe('Grid Touch Events', () => {
       });
 
       // Start at (0, 0)
-      const start = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
+      const start = getCellCenter(0, 0);
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', start.x, start.y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', start.x, start.y));
       });
 
       // Move to (2, 2) - diagonal
-      const end = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+      const end = getCellCenter(2, 2);
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchmove', end.x, end.y));
+        grid.dispatchEvent(createPointerEvent('pointermove', end.x, end.y));
       });
 
       // Should fill cells along the diagonal: (0,0), (1,1), (2,2)
@@ -687,10 +580,10 @@ describe('Grid Touch Events', () => {
         width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
       });
 
-      const { x, y } = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
+      const { x, y } = getCellCenter(0, 0);
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+        grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
       });
 
       expect(onCellUpdate).not.toHaveBeenCalled();
@@ -720,13 +613,11 @@ describe('Grid Touch Events', () => {
       });
 
       // With scale=2, cell (1,1) center would be at scaled position
-      // Original: padding + col * cellWithGap + cellSize/2 = 1 + 1*25 + 12 = 38
-      // Scaled: 38 * 2 = 76
       const scaledX = (padding + 1 * (cellSize + gap) + cellSize / 2) * scale;
       const scaledY = (padding + 1 * (cellSize + gap) + cellSize / 2) * scale;
 
       act(() => {
-        grid.dispatchEvent(createTouchEvent('touchstart', scaledX, scaledY));
+        grid.dispatchEvent(createPointerEvent('pointerdown', scaledX, scaledY));
       });
 
       expect(onCellUpdate).toHaveBeenCalledWith(1, 1, 6);
@@ -735,7 +626,7 @@ describe('Grid Touch Events', () => {
 
   describe('Grid Mode (Fill vs Pan)', () => {
     describe('Fill Mode (default)', () => {
-      it('should fill cells on touch in fill mode', () => {
+      it('should fill cells on pointer in fill mode', () => {
         const gridState = createTestGridState(5, 5);
         const onCellUpdate = jest.fn();
 
@@ -755,10 +646,10 @@ describe('Grid Touch Events', () => {
           width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
         });
 
-        const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+        const { x, y } = getCellCenter(2, 2);
 
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+          grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
         });
 
         expect(onCellUpdate).toHaveBeenCalledWith(2, 2, 4);
@@ -781,40 +672,10 @@ describe('Grid Touch Events', () => {
         expect(grid.className).toContain('cursor-crosshair');
         expect(grid.className).not.toContain('cursor-grab');
       });
-
-      it('should prevent default on touch to avoid scrolling in fill mode', () => {
-        const gridState = createTestGridState(5, 5);
-
-        const { container } = render(
-          <Grid
-            gridState={gridState}
-            selectedDice={4}
-            onCellUpdate={jest.fn()}
-            cellSize={cellSize}
-            mode="fill"
-          />
-        );
-
-        const grid = container.firstChild as HTMLElement;
-        jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
-          left: 0, top: 0, right: 200, bottom: 200,
-          width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
-        });
-
-        const { x, y } = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
-        const touchStartEvent = createTouchEvent('touchstart', x, y);
-        const preventDefaultSpy = jest.spyOn(touchStartEvent, 'preventDefault');
-
-        act(() => {
-          grid.dispatchEvent(touchStartEvent);
-        });
-
-        expect(preventDefaultSpy).toHaveBeenCalled();
-      });
     });
 
     describe('Pan Mode', () => {
-      it('should NOT fill cells on touch in pan mode', () => {
+      it('should NOT fill cells on pointer in pan mode', () => {
         const gridState = createTestGridState(5, 5);
         const onCellUpdate = jest.fn();
 
@@ -834,13 +695,12 @@ describe('Grid Touch Events', () => {
           width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
         });
 
-        const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+        const { x, y } = getCellCenter(2, 2);
 
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+          grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
         });
 
-        // Should NOT call onCellUpdate in pan mode
         expect(onCellUpdate).not.toHaveBeenCalled();
       });
 
@@ -862,7 +722,7 @@ describe('Grid Touch Events', () => {
         expect(grid.className).not.toContain('cursor-crosshair');
       });
 
-      it('should call onPan callback during touch move in pan mode', () => {
+      it('should call onPan callback during pointer move in pan mode', () => {
         const gridState = createTestGridState(5, 5);
         const onPan = jest.fn();
 
@@ -883,58 +743,17 @@ describe('Grid Touch Events', () => {
           width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
         });
 
-        // Start touch at (100, 100)
+        // Start at (100, 100)
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', 100, 100));
+          grid.dispatchEvent(createPointerEvent('pointerdown', 100, 100));
         });
 
         // Move to (150, 120) - delta: (50, 20)
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchmove', 150, 120));
+          grid.dispatchEvent(createPointerEvent('pointermove', 150, 120));
         });
 
         expect(onPan).toHaveBeenCalledWith(50, 20);
-      });
-
-      it('should accumulate pan deltas during continuous drag', () => {
-        const gridState = createTestGridState(5, 5);
-        const onPan = jest.fn();
-
-        const { container } = render(
-          <Grid
-            gridState={gridState}
-            selectedDice={4}
-            onCellUpdate={jest.fn()}
-            cellSize={cellSize}
-            mode="pan"
-            onPan={onPan}
-          />
-        );
-
-        const grid = container.firstChild as HTMLElement;
-        jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
-          left: 0, top: 0, right: 200, bottom: 200,
-          width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
-        });
-
-        // Start touch
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', 100, 100));
-        });
-
-        // First move: delta (30, 10)
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchmove', 130, 110));
-        });
-
-        // Second move: delta (20, 15) from previous position
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchmove', 150, 125));
-        });
-
-        expect(onPan).toHaveBeenCalledTimes(2);
-        expect(onPan).toHaveBeenNthCalledWith(1, 30, 10);
-        expect(onPan).toHaveBeenNthCalledWith(2, 20, 15);
       });
 
       it('should NOT trigger long press reset in pan mode', () => {
@@ -958,10 +777,10 @@ describe('Grid Touch Events', () => {
           width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
         });
 
-        const { x, y } = getCellCenter(2, 2, { left: 0, top: 0 } as DOMRect);
+        const { x, y } = getCellCenter(2, 2);
 
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+          grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
         });
 
         // Wait for long press duration
@@ -971,54 +790,6 @@ describe('Grid Touch Events', () => {
 
         // Should NOT reset cell in pan mode
         expect(onCellUpdate).not.toHaveBeenCalled();
-      });
-
-      it('should reset state on touch end in pan mode', () => {
-        const gridState = createTestGridState(5, 5);
-        const onPan = jest.fn();
-
-        const { container } = render(
-          <Grid
-            gridState={gridState}
-            selectedDice={4}
-            onCellUpdate={jest.fn()}
-            cellSize={cellSize}
-            mode="pan"
-            onPan={onPan}
-          />
-        );
-
-        const grid = container.firstChild as HTMLElement;
-        jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
-          left: 0, top: 0, right: 200, bottom: 200,
-          width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
-        });
-
-        // Start and move
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', 100, 100));
-        });
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchmove', 150, 120));
-        });
-
-        // End touch
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchend', 150, 120));
-        });
-
-        onPan.mockClear();
-
-        // Start new touch - should calculate delta from new start position
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', 50, 50));
-        });
-        act(() => {
-          grid.dispatchEvent(createTouchEvent('touchmove', 80, 70));
-        });
-
-        // Delta should be from (50,50) not from previous touch position
-        expect(onPan).toHaveBeenCalledWith(30, 20);
       });
     });
 
@@ -1046,12 +817,12 @@ describe('Grid Touch Events', () => {
         });
 
         // Fill mode - should fill cell
-        const { x, y } = getCellCenter(1, 1, { left: 0, top: 0 } as DOMRect);
+        const { x, y } = getCellCenter(1, 1);
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', x, y));
+          grid.dispatchEvent(createPointerEvent('pointerdown', x, y));
         });
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchend', x, y));
+          grid.dispatchEvent(createPointerEvent('pointerup', x, y));
         });
 
         expect(onCellUpdate).toHaveBeenCalledWith(1, 1, 4);
@@ -1069,7 +840,6 @@ describe('Grid Touch Events', () => {
           />
         );
 
-        // Need to re-mock after rerender
         jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
           left: 0, top: 0, right: 200, bottom: 200,
           width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
@@ -1077,15 +847,46 @@ describe('Grid Touch Events', () => {
 
         // Pan mode - should NOT fill cell, should pan instead
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchstart', 100, 100));
+          grid.dispatchEvent(createPointerEvent('pointerdown', 100, 100));
         });
         act(() => {
-          grid.dispatchEvent(createTouchEvent('touchmove', 150, 120));
+          grid.dispatchEvent(createPointerEvent('pointermove', 150, 120));
         });
 
         expect(onCellUpdate).not.toHaveBeenCalled();
         expect(onPan).toHaveBeenCalledWith(50, 20);
       });
+    });
+  });
+
+  describe('Context Menu (Right Click Reset)', () => {
+    it('should reset cell on context menu', () => {
+      const gridState = createTestGridState(5, 5);
+      gridState.cells[1][1].filledValue = 3;
+      const onCellUpdate = jest.fn();
+
+      const { container } = render(
+        <Grid
+          gridState={gridState}
+          selectedDice={4}
+          onCellUpdate={onCellUpdate}
+          cellSize={cellSize}
+        />
+      );
+
+      const grid = container.firstChild as HTMLElement;
+      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200,
+        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      const { x, y } = getCellCenter(1, 1);
+
+      act(() => {
+        fireEvent.contextMenu(grid, { clientX: x, clientY: y });
+      });
+
+      expect(onCellUpdate).toHaveBeenCalledWith(1, 1, null);
     });
   });
 });

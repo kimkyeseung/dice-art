@@ -27,7 +27,8 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
   const lastCellRef = useRef<{ row: number; col: number } | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
-  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const hadValueOnStartRef = useRef(false);
 
   // 셀 채우기 (좌클릭 또는 드래그)
   const fillCell = useCallback((row: number, col: number) => {
@@ -77,7 +78,7 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     onCellUpdate(row, col, null);
   }, [height, width, onCellUpdate]);
 
-  // 마우스 좌표에서 셀 인덱스 계산
+  // 좌표에서 셀 인덱스 계산
   const getCellFromPoint = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
     if (!gridRef.current) return null;
 
@@ -97,60 +98,6 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     return null;
   }, [cellSize, width, height, scale]);
 
-  // 마우스 다운 (드래그 시작)
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 0) { // 좌클릭
-      setIsDragging(true);
-      const cell = getCellFromPoint(e.clientX, e.clientY);
-      if (cell) {
-        fillCell(cell.row, cell.col);
-        lastCellRef.current = cell;
-      }
-    }
-  }, [getCellFromPoint, fillCell]);
-
-  // 마우스 이동 (드래그 중)
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging) return;
-
-    const cell = getCellFromPoint(e.clientX, e.clientY);
-    if (cell) {
-      // 이전 셀에서 현재 셀까지 라인으로 채우기
-      if (lastCellRef.current) {
-        fillLine(
-          lastCellRef.current.row,
-          lastCellRef.current.col,
-          cell.row,
-          cell.col
-        );
-      } else {
-        fillCell(cell.row, cell.col);
-      }
-      lastCellRef.current = cell;
-    }
-  }, [isDragging, getCellFromPoint, fillCell, fillLine]);
-
-  // 마우스 업 (드래그 종료)
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    lastCellRef.current = null;
-  }, []);
-
-  // 마우스가 그리드를 벗어났을 때
-  const handleMouseLeave = useCallback(() => {
-    setIsDragging(false);
-    lastCellRef.current = null;
-  }, []);
-
-  // 우클릭 (셀 리셋)
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    const cell = getCellFromPoint(e.clientX, e.clientY);
-    if (cell) {
-      resetCell(cell.row, cell.col);
-    }
-  }, [getCellFromPoint, resetCell]);
-
   // 길게 누르기 타이머 취소
   const cancelLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -168,146 +115,116 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     };
   }, []);
 
-  // 그리드 밖에서 마우스를 떼도 드래그 종료되도록 window 레벨에서 리스닝
-  useEffect(() => {
+  // 포인터 다운 (드래그 시작)
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    // 우클릭은 제외
+    if (e.button === 2) return;
+
+    // 포인터 캡처로 그리드 밖에서도 이벤트 받기
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+    // 이동 모드: 패닝 준비
+    if (mode === 'pan') {
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+      e.preventDefault();
+      return;
+    }
+
+    // 채우기 모드
+    e.preventDefault();
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+
+    if (cell) {
+      isLongPressRef.current = false;
+      lastCellRef.current = cell;
+
+      // 터치 시작 시점에 셀이 이미 채워져 있는지 확인
+      const cellData = cells[cell.row]?.[cell.col];
+      hadValueOnStartRef.current = cellData?.filledValue !== null;
+
+      // 길게 누르기 타이머 (터치에서만 의미있지만, 포인터로 통합)
+      longPressTimerRef.current = setTimeout(() => {
+        isLongPressRef.current = true;
+        // 터치 시작 시 이미 값이 있었던 경우에만 리셋
+        if (hadValueOnStartRef.current) {
+          resetCell(cell.row, cell.col);
+        }
+      }, LONG_PRESS_DURATION);
+
+      setIsDragging(true);
+      fillCell(cell.row, cell.col);
+    }
+  }, [mode, getCellFromPoint, cells, fillCell, resetCell]);
+
+  // 포인터 이동 (드래그 중)
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // 이동 모드: 패닝 처리
+    if (mode === 'pan') {
+      if (lastPointerRef.current && onPan) {
+        const deltaX = e.clientX - lastPointerRef.current.x;
+        const deltaY = e.clientY - lastPointerRef.current.y;
+        onPan(deltaX, deltaY);
+      }
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+      e.preventDefault();
+      return;
+    }
+
+    // 채우기 모드
     if (!isDragging) return;
 
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false);
-      lastCellRef.current = null;
-    };
+    e.preventDefault();
+    cancelLongPress();
 
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [isDragging]);
+    if (isLongPressRef.current) return;
 
-  // 현재 모드와 콜백을 ref로 저장 (이벤트 핸들러에서 최신 값 참조)
-  const modeRef = useRef(mode);
-  const onPanRef = useRef(onPan);
-  const fillCellRef = useRef(fillCell);
-  const fillLineRef = useRef(fillLine);
-  const resetCellRef = useRef(resetCell);
-  const cellsRef = useRef(cells);
-  const getCellFromPointRef = useRef(getCellFromPoint);
+    const cell = getCellFromPoint(e.clientX, e.clientY);
 
-  useEffect(() => {
-    modeRef.current = mode;
-    onPanRef.current = onPan;
-    fillCellRef.current = fillCell;
-    fillLineRef.current = fillLine;
-    resetCellRef.current = resetCell;
-    cellsRef.current = cells;
-    getCellFromPointRef.current = getCellFromPoint;
-  }, [mode, onPan, fillCell, fillLine, resetCell, cells, getCellFromPoint]);
-
-  // 터치 이벤트를 native로 등록 (passive: false로 preventDefault 가능하게)
-  useEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
-
-    const onTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-
-      // 이동 모드: 스크롤 준비
-      if (modeRef.current === 'pan') {
-        lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
-        e.preventDefault();
-        return;
+    if (cell && (
+      !lastCellRef.current ||
+      lastCellRef.current.row !== cell.row ||
+      lastCellRef.current.col !== cell.col
+    )) {
+      if (lastCellRef.current) {
+        fillLine(
+          lastCellRef.current.row,
+          lastCellRef.current.col,
+          cell.row,
+          cell.col
+        );
+      } else {
+        fillCell(cell.row, cell.col);
       }
+      lastCellRef.current = cell;
+    }
+  }, [mode, onPan, isDragging, getCellFromPoint, fillCell, fillLine, cancelLongPress]);
 
-      // 채우기 모드
-      e.preventDefault();
-      const cell = getCellFromPointRef.current(touch.clientX, touch.clientY);
+  // 포인터 업 (드래그 종료)
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    // 포인터 캡처 해제
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
-      if (cell) {
-        isLongPressRef.current = false;
-        lastCellRef.current = cell;
+    // 이동 모드
+    if (mode === 'pan') {
+      lastPointerRef.current = null;
+      return;
+    }
 
-        // 터치 시작 시점에 셀이 이미 채워져 있는지 확인
-        // 길게 누르기는 이미 채워진 셀을 리셋하는 용도이므로,
-        // 빈 셀을 채운 후 리셋하지 않도록 함
-        const cellData = cellsRef.current[cell.row]?.[cell.col];
-        const hadValue = cellData?.filledValue !== null;
+    // 채우기 모드
+    cancelLongPress();
+    setIsDragging(false);
+    lastCellRef.current = null;
+    isLongPressRef.current = false;
+  }, [mode, cancelLongPress]);
 
-        longPressTimerRef.current = setTimeout(() => {
-          isLongPressRef.current = true;
-          // 터치 시작 시 이미 값이 있었던 경우에만 리셋
-          if (hadValue) {
-            resetCellRef.current(cell.row, cell.col);
-          }
-        }, LONG_PRESS_DURATION);
-
-        setIsDragging(true);
-        fillCellRef.current(cell.row, cell.col);
-      }
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-
-      // 이동 모드: 스크롤 처리
-      if (modeRef.current === 'pan') {
-        if (lastTouchRef.current && onPanRef.current) {
-          const deltaX = touch.clientX - lastTouchRef.current.x;
-          const deltaY = touch.clientY - lastTouchRef.current.y;
-          onPanRef.current(deltaX, deltaY);
-        }
-        lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
-        e.preventDefault();
-        return;
-      }
-
-      // 채우기 모드
-      e.preventDefault();
-      cancelLongPress();
-
-      if (isLongPressRef.current) return;
-
-      const cell = getCellFromPointRef.current(touch.clientX, touch.clientY);
-
-      if (cell && (
-        !lastCellRef.current ||
-        lastCellRef.current.row !== cell.row ||
-        lastCellRef.current.col !== cell.col
-      )) {
-        if (lastCellRef.current) {
-          fillLineRef.current(
-            lastCellRef.current.row,
-            lastCellRef.current.col,
-            cell.row,
-            cell.col
-          );
-        } else {
-          fillCellRef.current(cell.row, cell.col);
-        }
-        lastCellRef.current = cell;
-      }
-    };
-
-    const onTouchEnd = () => {
-      // 이동 모드
-      if (modeRef.current === 'pan') {
-        lastTouchRef.current = null;
-        return;
-      }
-
-      // 채우기 모드
-      cancelLongPress();
-      setIsDragging(false);
-      lastCellRef.current = null;
-      isLongPressRef.current = false;
-    };
-
-    grid.addEventListener('touchstart', onTouchStart, { passive: false });
-    grid.addEventListener('touchmove', onTouchMove, { passive: false });
-    grid.addEventListener('touchend', onTouchEnd);
-
-    return () => {
-      grid.removeEventListener('touchstart', onTouchStart);
-      grid.removeEventListener('touchmove', onTouchMove);
-      grid.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [cancelLongPress]);
+  // 우클릭 (셀 리셋)
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    if (cell) {
+      resetCell(cell.row, cell.col);
+    }
+  }, [getCellFromPoint, resetCell]);
 
   return (
     <div
@@ -317,10 +234,10 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
         gridTemplateColumns: `repeat(${width}, ${cellSize}px)`,
         gridTemplateRows: `repeat(${height}, ${cellSize}px)`,
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onContextMenu={handleContextMenu}
     >
       {cells.map((row, rowIndex) =>
