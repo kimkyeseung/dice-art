@@ -179,6 +179,109 @@ describe('Grid Touch Events', () => {
       expect(onCellUpdate).toHaveBeenCalledWith(0, 2, 3);
     });
 
+    it('should continue filling cells even when gridState updates during drag', () => {
+      // This test simulates the real-world scenario where gridState updates
+      // after each cell is filled, which was causing a bug where only the
+      // first cell was filled due to stale closure references.
+      let currentGridState = createTestGridState(5, 5);
+
+      const onCellUpdate = jest.fn().mockImplementation((row, col, value) => {
+        // Simulate parent component updating gridState
+        currentGridState = {
+          ...currentGridState,
+          cells: currentGridState.cells.map((r, rIdx) =>
+            rIdx === row
+              ? r.map((c, cIdx) =>
+                  cIdx === col ? { ...c, filledValue: value } : c
+                )
+              : r
+          ),
+        };
+      });
+
+      const { container, rerender } = render(
+        <Grid
+          gridState={currentGridState}
+          selectedDice={3}
+          onCellUpdate={onCellUpdate}
+          cellSize={cellSize}
+        />
+      );
+
+      const grid = container.firstChild as HTMLElement;
+      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200,
+        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      // Start touch at (0, 0)
+      const start = getCellCenter(0, 0, { left: 0, top: 0 } as DOMRect);
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchstart', start.x, start.y));
+      });
+
+      // Rerender with updated state (simulating React state update)
+      rerender(
+        <Grid
+          gridState={currentGridState}
+          selectedDice={3}
+          onCellUpdate={onCellUpdate}
+          cellSize={cellSize}
+        />
+      );
+
+      // Re-mock getBoundingClientRect after rerender
+      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200,
+        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      // Move to (0, 1)
+      const mid = getCellCenter(0, 1, { left: 0, top: 0 } as DOMRect);
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchmove', mid.x, mid.y));
+      });
+
+      // Rerender with updated state
+      rerender(
+        <Grid
+          gridState={currentGridState}
+          selectedDice={3}
+          onCellUpdate={onCellUpdate}
+          cellSize={cellSize}
+        />
+      );
+
+      jest.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200,
+        width: 200, height: 200, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      // Move to (0, 2)
+      const end = getCellCenter(0, 2, { left: 0, top: 0 } as DOMRect);
+      act(() => {
+        grid.dispatchEvent(createTouchEvent('touchmove', end.x, end.y));
+      });
+
+      // Should have filled all 3 cells despite state updates
+      // Note: Bresenham's algorithm may call fillLine for overlapping segments,
+      // so we check that each cell was called at least once
+      expect(onCellUpdate).toHaveBeenCalledWith(0, 0, 3);
+      expect(onCellUpdate).toHaveBeenCalledWith(0, 1, 3);
+      expect(onCellUpdate).toHaveBeenCalledWith(0, 2, 3);
+
+      // Verify all 3 cells were filled (calls may be more due to line algorithm)
+      const uniqueCells = new Set(
+        onCellUpdate.mock.calls
+          .filter((call) => call[2] === 3)
+          .map((call) => `${call[0]}-${call[1]}`)
+      );
+      expect(uniqueCells.size).toBe(3);
+      expect(uniqueCells.has('0-0')).toBe(true);
+      expect(uniqueCells.has('0-1')).toBe(true);
+      expect(uniqueCells.has('0-2')).toBe(true);
+    });
+
     it('should prevent default on touch move to avoid scrolling', () => {
       const gridState = createTestGridState(5, 5);
       const onCellUpdate = jest.fn();
