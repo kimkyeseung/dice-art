@@ -219,6 +219,7 @@ export function ImageUploader({ onImageLoad }: ImageUploaderProps) {
           {PRESET_IMAGES.map((preset) => (
             <button
               key={preset.id}
+              data-testid="preset-image"
               onClick={() => handlePresetSelect(preset)}
               disabled={loadingPreset !== null}
               className={`

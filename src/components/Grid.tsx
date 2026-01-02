@@ -30,6 +30,10 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
   const hadValueOnStartRef = useRef(false);
 
+  // 두 손가락 터치 관련 ref
+  const isTwoFingerPanningRef = useRef(false);
+  const lastTwoFingerCenterRef = useRef<{ x: number; y: number } | null>(null);
+
   // 셀 채우기 (좌클릭 또는 드래그)
   const fillCell = useCallback((row: number, col: number) => {
     if (selectedDice === null) return;
@@ -115,8 +119,76 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
     };
   }, []);
 
+  // 두 터치 포인트의 중심 계산
+  const getTwoFingerCenter = (touches: TouchList): { x: number; y: number } => {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  };
+
+  // 두 손가락 터치 이벤트 처리 (native event)
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // 두 손가락 터치 시작
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        isTwoFingerPanningRef.current = true;
+        lastTwoFingerCenterRef.current = getTwoFingerCenter(e.touches);
+
+        // 진행 중인 드래그/롱프레스 취소
+        cancelLongPress();
+        setIsDragging(false);
+        lastCellRef.current = null;
+        isLongPressRef.current = false;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      // 두 손가락으로 패닝 중
+      if (e.touches.length === 2 && isTwoFingerPanningRef.current) {
+        e.preventDefault();
+        const center = getTwoFingerCenter(e.touches);
+
+        if (lastTwoFingerCenterRef.current && onPan) {
+          const deltaX = center.x - lastTwoFingerCenterRef.current.x;
+          const deltaY = center.y - lastTwoFingerCenterRef.current.y;
+          onPan(deltaX, deltaY);
+        }
+
+        lastTwoFingerCenterRef.current = center;
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      // 모든 손가락이 떼어졌거나 한 손가락만 남았을 때
+      if (e.touches.length < 2) {
+        isTwoFingerPanningRef.current = false;
+        lastTwoFingerCenterRef.current = null;
+      }
+    };
+
+    grid.addEventListener('touchstart', handleTouchStart, { passive: false });
+    grid.addEventListener('touchmove', handleTouchMove, { passive: false });
+    grid.addEventListener('touchend', handleTouchEnd);
+    grid.addEventListener('touchcancel', handleTouchEnd);
+
+    return () => {
+      grid.removeEventListener('touchstart', handleTouchStart);
+      grid.removeEventListener('touchmove', handleTouchMove);
+      grid.removeEventListener('touchend', handleTouchEnd);
+      grid.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [onPan, cancelLongPress]);
+
   // 포인터 다운 (드래그 시작)
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    // 두 손가락 패닝 중이면 무시
+    if (isTwoFingerPanningRef.current) return;
+
     // 우클릭은 제외
     if (e.button === 2) return;
 
@@ -158,6 +230,9 @@ export function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, sca
 
   // 포인터 이동 (드래그 중)
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // 두 손가락 패닝 중이면 무시
+    if (isTwoFingerPanningRef.current) return;
+
     // 이동 모드: 패닝 처리
     if (mode === 'pan') {
       if (lastPointerRef.current && onPan) {

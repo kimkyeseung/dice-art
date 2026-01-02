@@ -22,6 +22,7 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
   const renderButton = (value: DiceValue) => (
     <button
       key={value}
+      data-testid={`dice-button-${value}`}
       onClick={() => onSelect(value)}
       className={`
         p-1 sm:p-2 rounded-lg transition-all duration-150
