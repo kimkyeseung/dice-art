@@ -60,6 +60,16 @@ Key functions in `src/utils/storage.ts`:
 - **VirtualJoystick** (`src/components/VirtualJoystick.tsx`): Mobile-only joystick for panning the grid view. Uses pointer events and requestAnimationFrame for smooth continuous movement
 - **ZoomControls** (`src/components/ZoomControls.tsx`): Zoom in/out buttons with progress preview button. Shows current zoom percentage
 - **ProgressPreviewDialog** (`src/components/ProgressPreviewDialog.tsx`): Modal dialog showing current progress as a canvas preview. Filled cells shown as dice, remaining cells as white grid
+- **SectionNavigator** (`src/components/SectionNavigator.tsx`): Floating minimap for navigating large grids (50x50+). Shows section progress with bottom sheet UI, keyboard shortcuts (Shift+Arrow), and haptic feedback
+
+### Section System (Large Grid Support)
+
+For grids larger than 50x50 (2500+ cells), the app splits them into manageable sections:
+- **sectionUtils** (`src/utils/sectionUtils.ts`): Utility functions for section layout calculation, progress tracking, and coordinate mapping
+- **SectionLayout**: Grid divided into sections of max 50x50 cells (e.g., 100x100 → 2x2 sections: A1, A2, B1, B2)
+- **Section Navigation**: Floating button shows current section label with circular progress. Tap to open bottom sheet with full minimap
+- **Keyboard Shortcuts**: `Shift + Arrow keys` for quick section navigation
+- Grid component receives `rowOffset`/`colOffset` to map section coordinates to global grid
 
 ### State Management
 
@@ -103,6 +113,7 @@ PostgreSQL (Neon) with Prisma ORM. Single `Artwork` model stores gridState as JS
 - Located in `e2e/` directory
 - `desktop.spec.ts` - Desktop browser tests
 - `mobile-touch.spec.ts` - Mobile touch interaction tests (single finger drag, two-finger pan, long press, eraser, joystick)
+- `section-navigator.spec.ts` - Section navigation tests for large grids (floating button, bottom sheet, section switching)
 - Uses CDP (Chrome DevTools Protocol) for precise touch event simulation
 - Run with `npm run test:e2e`
 
@@ -113,4 +124,5 @@ PostgreSQL (Neon) with Prisma ORM. Single `Artwork` model stores gridState as JS
 - Export renders dice at 60px cell size with 2px gap
 - Unsplash images are fetched directly without API key using public image URLs
 - DiceValue type is `0 | 1 | 2 | 3 | 4 | 5 | 6` (includes 0 for blank dice)
-- PaletteValue type is `DiceValue | 'eraser'` for palette selection
+- PaletteValue type is `DiceValue | 'eraser' | 'pan'` for palette selection
+- SectionInfo/SectionLayout types define section boundaries and navigation structure
