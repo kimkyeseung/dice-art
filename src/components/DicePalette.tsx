@@ -144,11 +144,11 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
         주사위 선택
       </legend>
       {/* xs 미만: 슬라이드 UI (좁은 화면) */}
-      <div className="xs:hidden flex items-center justify-center gap-0">
+      <div className="xs:hidden flex items-center justify-center gap-1">
         {/* 왼쪽 화살표 */}
         <button
           onClick={() => setSlidePosition('left')}
-          className={`p-0.5 rounded transition-all ${
+          className={`p-1 rounded transition-all ${
             slidePosition === 'left'
               ? 'text-neutral-300 cursor-default'
               : 'text-neutral-600 hover:bg-neutral-200'
@@ -160,12 +160,12 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
           </svg>
         </button>
 
-        {/* 슬라이드 주사위 영역 - 4개 버튼 너비만큼 보이는 영역 */}
-        <div className="overflow-hidden" style={{ width: 4 * 32 }}>
+        {/* 슬라이드 주사위 영역 - 4개 버튼 너비만큼 보이는 영역 + 링 여유 공간 */}
+        <div className="overflow-hidden py-1" style={{ width: 4 * 32 + 4 }}>
           <div
             className="flex items-center gap-0 transition-transform duration-200 ease-out"
             style={{
-              transform: slidePosition === 'left' ? 'translateX(0)' : 'translateX(-96px)', // 3개 버튼 너비만큼 이동 (32px * 3)
+              transform: slidePosition === 'left' ? 'translateX(2px)' : 'translateX(-94px)', // 3개 버튼 너비만큼 이동 (32px * 3 - 2px 여유)
             }}
           >
             {allValues.map(v => renderDiceButton(v, true))}
@@ -175,7 +175,7 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
         {/* 오른쪽 화살표 */}
         <button
           onClick={() => setSlidePosition('right')}
-          className={`p-0.5 rounded transition-all ${
+          className={`p-1 rounded transition-all ${
             slidePosition === 'right'
               ? 'text-neutral-300 cursor-default'
               : 'text-neutral-600 hover:bg-neutral-200'
@@ -188,7 +188,7 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
         </button>
 
         {/* 구분선 */}
-        <div className="w-px h-8 bg-neutral-300 mx-0.5" />
+        <div className="w-px h-8 bg-neutral-300 mx-1" />
 
         {/* 도구 그룹 */}
         {renderToolButton('eraser', true)}
