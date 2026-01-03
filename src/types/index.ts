@@ -82,3 +82,25 @@ export interface ApiErrorResponse {
   error: string;
   message: string;
 }
+
+// ===== 섹션 분할 타입 =====
+
+// 섹션 정보
+export interface SectionInfo {
+  row: number; // 섹션 행 인덱스 (0부터 시작)
+  col: number; // 섹션 열 인덱스 (0부터 시작)
+  startRow: number; // 그리드에서 시작 행
+  startCol: number; // 그리드에서 시작 열
+  endRow: number; // 그리드에서 끝 행 (exclusive)
+  endCol: number; // 그리드에서 끝 열 (exclusive)
+  width: number; // 섹션 너비 (셀 개수)
+  height: number; // 섹션 높이 (셀 개수)
+}
+
+// 섹션 분할 설정
+export interface SectionLayout {
+  rows: number; // 세로로 나눈 섹션 수
+  cols: number; // 가로로 나눈 섹션 수
+  sections: SectionInfo[][]; // 2D 배열: sections[row][col]
+  totalSections: number; // 전체 섹션 수
+}

@@ -14,13 +14,15 @@ interface GridProps {
   scale?: number; // 줌 스케일
   showMismatch?: boolean; // 틀린 값 표시
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>; // 가상화용 스크롤 컨테이너
+  rowOffset?: number; // 섹션 모드: 전체 그리드에서의 시작 행
+  colOffset?: number; // 섹션 모드: 전체 그리드에서의 시작 열
 }
 
 const LONG_PRESS_DURATION = 500; // 길게 누르기 감지 시간 (ms)
 const VIRTUALIZATION_THRESHOLD = 10000; // 가상화 적용 최소 셀 개수 (100x100 이상)
 const OVERSCAN = 25; // 뷰포트 외 추가 렌더링할 셀 수 (조이스틱 스크롤 끊김 방지)
 
-export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false, scrollContainerRef }: GridProps) {
+export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false, scrollContainerRef, rowOffset = 0, colOffset = 0 }: GridProps) {
   const { cells, width, height } = gridState;
   const [isDragging, setIsDragging] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -112,14 +114,18 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
       if (cellData?.filledValue !== null) return;
     }
 
+    // 섹션 오프셋 적용하여 전체 그리드 좌표로 변환
+    const globalRow = row + rowOffset;
+    const globalCol = col + colOffset;
+
     if (selectedDice === 'eraser') {
       // 지우개 모드: 셀 리셋
-      onCellUpdate(row, col, null);
+      onCellUpdate(globalRow, globalCol, null);
     } else {
       // 주사위 채우기
-      onCellUpdate(row, col, selectedDice);
+      onCellUpdate(globalRow, globalCol, selectedDice);
     }
-  }, [selectedDice, height, width, cells, onCellUpdate]);
+  }, [selectedDice, height, width, cells, onCellUpdate, rowOffset, colOffset]);
 
   // 두 점 사이의 모든 셀을 채우기 (Bresenham's line algorithm)
   // 드래그 중이므로 이미 채워진 셀은 건너뜀
@@ -159,8 +165,11 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
   const resetCell = useCallback((row: number, col: number) => {
     if (row < 0 || row >= height || col < 0 || col >= width) return;
 
-    onCellUpdate(row, col, null);
-  }, [height, width, onCellUpdate]);
+    // 섹션 오프셋 적용하여 전체 그리드 좌표로 변환
+    const globalRow = row + rowOffset;
+    const globalCol = col + colOffset;
+    onCellUpdate(globalRow, globalCol, null);
+  }, [height, width, onCellUpdate, rowOffset, colOffset]);
 
   // 좌표에서 셀 인덱스 계산
   const getCellFromPoint = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {

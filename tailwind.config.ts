@@ -26,9 +26,14 @@ const config: Config = {
           '50%': { transform: 'scale(1.1)' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        'bounce-once': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-25%)' },
+        },
       },
       animation: {
         'dice-pop': 'dice-pop 0.15s ease-out',
+        'bounce-once': 'bounce-once 0.6s ease-out',
       },
     },
   },

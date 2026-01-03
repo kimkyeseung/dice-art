@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useCallback, useEffect, use, useRef } from 'react';
+import { useState, useCallback, useEffect, use, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, VirtualJoystick, ProgressPreviewDialog } from '@/components';
+import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, VirtualJoystick, ProgressPreviewDialog, SectionNavigator } from '@/components';
 import type { PaletteValue } from '@/components';
 import { useUser } from '@/contexts/UserContext';
-import { GridState, DiceValue } from '@/types';
+import { GridState, DiceValue, SectionLayout } from '@/types';
 import { processImage, calculateProgress } from '@/utils/imageProcessor';
 import { loadWork, saveWork, deleteWork } from '@/utils/storage';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useZoomPan } from '@/hooks/useZoomPan';
 import { useImageProcessorWorker } from '@/hooks/useImageProcessorWorker';
 import { exportGridAsImage, isGridComplete, renderGridToCanvas } from '@/utils/exportImage';
+import { calculateSectionLayout, extractSectionGrid } from '@/utils/sectionUtils';
 
 interface WorkPageProps {
   params: Promise<{ id: string }>;
@@ -39,6 +40,9 @@ export default function WorkPage({ params }: WorkPageProps) {
   // 진행상황 미리보기 다이얼로그 상태
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
 
+  // 섹션 관련 상태
+  const [currentSectionRow, setCurrentSectionRow] = useState(0);
+  const [currentSectionCol, setCurrentSectionCol] = useState(0);
 
   // 사용자 상태
   const { user, setNickname } = useUser();
@@ -74,6 +78,35 @@ export default function WorkPage({ params }: WorkPageProps) {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollLeft -= deltaX;
       scrollContainerRef.current.scrollTop -= deltaY;
+    }
+  }, []);
+
+  // 섹션 레이아웃 계산 (그리드가 큰 경우에만)
+  const sectionLayout = useMemo<SectionLayout | null>(() => {
+    if (!gridState) return null;
+    return calculateSectionLayout(gridState.width, gridState.height);
+  }, [gridState]);
+
+  // 현재 섹션 정보
+  const currentSection = useMemo(() => {
+    if (!sectionLayout) return null;
+    return sectionLayout.sections[currentSectionRow][currentSectionCol];
+  }, [sectionLayout, currentSectionRow, currentSectionCol]);
+
+  // 현재 섹션의 그리드 (섹션 모드일 때만)
+  const currentSectionGrid = useMemo(() => {
+    if (!gridState || !currentSection) return null;
+    return extractSectionGrid(gridState, currentSection);
+  }, [gridState, currentSection]);
+
+  // 섹션 변경 핸들러
+  const handleSectionChange = useCallback((row: number, col: number) => {
+    setCurrentSectionRow(row);
+    setCurrentSectionCol(col);
+    // 섹션 변경 시 스크롤 위치 초기화
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+      scrollContainerRef.current.scrollLeft = 0;
     }
   }, []);
 
@@ -440,6 +473,17 @@ export default function WorkPage({ params }: WorkPageProps) {
               />
             </div>
 
+            {/* 섹션 네비게이터 (섹션 모드일 때만 표시) - 플로팅 UI */}
+            {sectionLayout && (
+              <SectionNavigator
+                gridState={gridState}
+                layout={sectionLayout}
+                currentRow={currentSectionRow}
+                currentCol={currentSectionCol}
+                onSectionChange={handleSectionChange}
+              />
+            )}
+
             {/* 그리드 영역 */}
             <div className="relative flex-1 min-h-0 flex flex-col">
               <div
@@ -456,21 +500,37 @@ export default function WorkPage({ params }: WorkPageProps) {
                     transform: `scale(${scale}) translate(${translateX / scale}px, ${translateY / scale}px)`,
                   }}
                 >
-                  <Grid
-                    gridState={gridState}
-                    cellSize={24}
-                    selectedDice={selectedDice}
-                    onCellUpdate={handleCellUpdate}
-                    scale={scale}
-                    showMismatch={showMismatch}
-                    scrollContainerRef={scrollContainerRef}
-                  />
+                  {/* 섹션 모드: 현재 섹션만 렌더링 */}
+                  {sectionLayout && currentSectionGrid && currentSection ? (
+                    <Grid
+                      gridState={currentSectionGrid}
+                      cellSize={24}
+                      selectedDice={selectedDice}
+                      onCellUpdate={handleCellUpdate}
+                      scale={scale}
+                      showMismatch={showMismatch}
+                      scrollContainerRef={scrollContainerRef}
+                      rowOffset={currentSection.startRow}
+                      colOffset={currentSection.startCol}
+                    />
+                  ) : (
+                    /* 일반 모드: 전체 그리드 렌더링 */
+                    <Grid
+                      gridState={gridState}
+                      cellSize={24}
+                      selectedDice={selectedDice}
+                      onCellUpdate={handleCellUpdate}
+                      scale={scale}
+                      showMismatch={showMismatch}
+                      scrollContainerRef={scrollContainerRef}
+                    />
+                  )}
                 </div>
               </div>
 
               {/* 줌 안내 */}
               <p className="text-xs text-neutral-400 text-center mt-2 hidden sm:block">
-                Ctrl + 휠로 줌 조절
+                {sectionLayout ? '섹션을 클릭하여 이동 · ' : ''}Ctrl + 휠로 줌 조절
               </p>
             </div>
 
