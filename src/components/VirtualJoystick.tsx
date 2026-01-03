@@ -13,6 +13,7 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
   const [knobPosition, setKnobPosition] = useState({ x: 0, y: 0 });
   const animationFrameRef = useRef<number | null>(null);
   const lastMoveRef = useRef({ x: 0, y: 0 });
+  const isActiveRef = useRef(false); // 즉시 체크용 ref
 
   const knobSize = size * 0.4;
   const maxDistance = (size - knobSize) / 2;
@@ -28,6 +29,9 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
     if (!isActive) return;
 
     const animate = () => {
+      // ref로 즉시 체크하여 비활성화 시 즉시 중단
+      if (!isActiveRef.current) return;
+
       if (lastMoveRef.current.x !== 0 || lastMoveRef.current.y !== 0) {
         // 속도 조절 (거리에 비례), 방향 반전 (조이스틱 방향 = 스크롤 방향)
         const speed = 8;
@@ -50,8 +54,10 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setIsActive(true);
+    isActiveRef.current = true;
 
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
@@ -84,6 +90,7 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isActive) return;
+    e.stopPropagation();
 
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
@@ -95,9 +102,10 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    isActiveRef.current = false; // 즉시 애니메이션 중단
+    lastMoveRef.current = { x: 0, y: 0 }; // 이동값 먼저 초기화
     setIsActive(false);
     setKnobPosition({ x: 0, y: 0 });
-    lastMoveRef.current = { x: 0, y: 0 };
   }, []);
 
   return (

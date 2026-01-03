@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ImageUploader, NicknameDialog } from '@/components';
 import { useUser } from '@/contexts/UserContext';
 import { processImage } from '@/utils/imageProcessor';
+import { useImageProcessorWorker } from '@/hooks/useImageProcessorWorker';
 import { generateWorkId, saveWork, migrateOldStorage, listWorks } from '@/utils/storage';
 
 export default function Home() {
@@ -24,6 +25,9 @@ export default function Home() {
   // 데모 이미지 hover 상태
   const [isDemoHovered, setIsDemoHovered] = useState(false);
 
+  // Web Worker 훅
+  const { processImage: processImageWorker, isSupported: isWorkerSupported } = useImageProcessorWorker();
+
   // 초기화 (마이그레이션 포함)
   useEffect(() => {
     migrateOldStorage();
@@ -31,25 +35,33 @@ export default function Home() {
     setIsInitialized(true);
   }, []);
 
-  const handleImageLoad = useCallback((imageData: string, image: HTMLImageElement, dimension: number = 50) => {
+  const handleImageLoad = useCallback(async (imageData: string, image: HTMLImageElement, dimension: number = 50) => {
     setIsProcessing(true);
 
-    setTimeout(() => {
-      try {
-        const grid = processImage(image, dimension);
-        const workId = generateWorkId();
+    try {
+      let grid;
 
-        // 새 작업 저장
-        saveWork(workId, grid, imageData);
-
-        // work 페이지로 이동
-        router.push(`/work/${workId}`);
-      } catch (error) {
-        console.error('이미지 처리 실패:', error);
-        setIsProcessing(false);
+      if (isWorkerSupported) {
+        // Web Worker로 처리 (UI 블로킹 없음)
+        grid = await processImageWorker(image, dimension);
+      } else {
+        // Fallback: 메인 스레드에서 처리
+        await new Promise(resolve => setTimeout(resolve, 100));
+        grid = processImage(image, dimension);
       }
-    }, 100);
-  }, [router]);
+
+      const workId = generateWorkId();
+
+      // 새 작업 저장
+      saveWork(workId, grid, imageData);
+
+      // work 페이지로 이동
+      router.push(`/work/${workId}`);
+    } catch (error) {
+      console.error('이미지 처리 실패:', error);
+      setIsProcessing(false);
+    }
+  }, [router, isWorkerSupported, processImageWorker]);
 
   // 초기화 전에는 아무것도 렌더링하지 않음 (hydration 문제 방지)
   if (!isInitialized) {

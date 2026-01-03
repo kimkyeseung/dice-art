@@ -13,11 +13,14 @@ interface GridProps {
   onCellUpdate: (row: number, col: number, value: DiceValue | null) => void;
   scale?: number; // 줌 스케일
   showMismatch?: boolean; // 틀린 값 표시
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>; // 가상화용 스크롤 컨테이너
 }
 
 const LONG_PRESS_DURATION = 500; // 길게 누르기 감지 시간 (ms)
+const VIRTUALIZATION_THRESHOLD = 2500; // 가상화 적용 최소 셀 개수
+const OVERSCAN = 5; // 뷰포트 외 추가 렌더링할 셀 수
 
-export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false }: GridProps) {
+export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false, scrollContainerRef }: GridProps) {
   const { cells, width, height } = gridState;
   const [isDragging, setIsDragging] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -25,6 +28,74 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
   const hadValueOnStartRef = useRef(false);
+
+  // 가상화: 보이는 영역 계산
+  const [visibleRange, setVisibleRange] = useState({
+    startRow: 0,
+    endRow: height,
+    startCol: 0,
+    endCol: width,
+  });
+
+  const totalCells = width * height;
+  const shouldVirtualize = totalCells >= VIRTUALIZATION_THRESHOLD;
+
+  // 스크롤/리사이즈 시 보이는 영역 업데이트
+  useEffect(() => {
+    if (!shouldVirtualize || !scrollContainerRef?.current) return;
+
+    let rafId: number | null = null;
+    let isScheduled = false;
+
+    const updateVisibleRange = () => {
+      isScheduled = false;
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const cellWithGap = cellSize + 1;
+      const scaledCellSize = cellWithGap * scale;
+
+      // 스크롤 위치와 컨테이너 크기
+      const scrollLeft = container.scrollLeft;
+      const scrollTop = container.scrollTop;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      // 보이는 셀 범위 계산 (여유분 포함)
+      const startCol = Math.max(0, Math.floor(scrollLeft / scaledCellSize) - OVERSCAN);
+      const endCol = Math.min(width, Math.ceil((scrollLeft + containerWidth) / scaledCellSize) + OVERSCAN);
+      const startRow = Math.max(0, Math.floor(scrollTop / scaledCellSize) - OVERSCAN);
+      const endRow = Math.min(height, Math.ceil((scrollTop + containerHeight) / scaledCellSize) + OVERSCAN);
+
+      setVisibleRange(prev => {
+        // 변경이 없으면 상태 업데이트 스킵
+        if (prev.startRow === startRow && prev.endRow === endRow &&
+            prev.startCol === startCol && prev.endCol === endCol) {
+          return prev;
+        }
+        return { startRow, endRow, startCol, endCol };
+      });
+    };
+
+    // RAF로 throttle하여 성능 최적화
+    const scheduleUpdate = () => {
+      if (isScheduled) return;
+      isScheduled = true;
+      rafId = requestAnimationFrame(updateVisibleRange);
+    };
+
+    const container = scrollContainerRef.current;
+    updateVisibleRange();
+
+    container.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+
+    return () => {
+      container.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [shouldVirtualize, scrollContainerRef, cellSize, scale, width, height]);
 
   // 셀 채우기 또는 지우기 (좌클릭 또는 드래그)
   // skipFilled: true이면 이미 채워진 셀은 건너뜀 (드래그 시 사용)
@@ -239,6 +310,16 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
     >
       {cells.map((row, rowIndex) =>
         row.map((cell, colIndex) => {
+          // 가상화: 보이는 영역 외 셀은 빈 div로 대체
+          if (shouldVirtualize && (
+            rowIndex < visibleRange.startRow ||
+            rowIndex >= visibleRange.endRow ||
+            colIndex < visibleRange.startCol ||
+            colIndex >= visibleRange.endCol
+          )) {
+            return <div key={`${rowIndex}-${colIndex}`} />;
+          }
+
           if (cell.filledValue !== null) {
             // 주사위로 채워진 셀 - key에 filledValue 포함하여 값 변경 시 애니메이션 트리거
             const isWrong = cell.filledValue !== cell.targetValue;
