@@ -18,7 +18,7 @@ interface GridProps {
 
 const LONG_PRESS_DURATION = 500; // 길게 누르기 감지 시간 (ms)
 const VIRTUALIZATION_THRESHOLD = 2500; // 가상화 적용 최소 셀 개수
-const OVERSCAN = 5; // 뷰포트 외 추가 렌더링할 셀 수
+const OVERSCAN = 15; // 뷰포트 외 추가 렌더링할 셀 수 (조이스틱 스크롤 끊김 방지)
 
 export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice, onCellUpdate, scale = 1, showMismatch = false, scrollContainerRef }: GridProps) {
   const { cells, width, height } = gridState;
