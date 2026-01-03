@@ -105,7 +105,7 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
 
   return (
     <fieldset className="border-2 border-neutral-300 rounded-lg p-2 sm:p-4 bg-neutral-100/95 backdrop-blur-sm">
-      <legend className="px-2 text-xs sm:text-sm font-medium text-neutral-600">
+      <legend className="px-2 text-xs sm:text-sm font-medium text-neutral-600 pointer-events-none">
         주사위 선택
       </legend>
       {/* 모바일: 2줄 배치 (4+4) */}
