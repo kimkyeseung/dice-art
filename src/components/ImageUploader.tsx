@@ -1,46 +1,23 @@
 'use client';
 
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
+
+interface PicsumImage {
+  id: string;
+  author: string;
+  width: number;
+  height: number;
+  url: string;
+  download_url: string;
+}
 
 interface PresetImage {
   id: string;
   url: string;
   thumbnail: string;
   alt: string;
-  credit: string;
+  author: string;
 }
-
-// Unsplash 프리셋 이미지들 (무료 이미지)
-const PRESET_IMAGES: PresetImage[] = [
-  {
-    id: 'portrait',
-    url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=60',
-    alt: '인물 사진',
-    credit: 'Unsplash',
-  },
-  {
-    id: 'cat',
-    url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&q=60',
-    alt: '고양이',
-    credit: 'Unsplash',
-  },
-  {
-    id: 'landscape',
-    url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&q=60',
-    alt: '풍경',
-    credit: 'Unsplash',
-  },
-  {
-    id: 'flower',
-    url: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=200&q=60',
-    alt: '꽃',
-    credit: 'Unsplash',
-  },
-];
 
 interface ImageUploaderProps {
   onImageLoad: (imageData: string, image: HTMLImageElement) => void;
@@ -50,18 +27,90 @@ export function ImageUploader({ onImageLoad }: ImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingPreset, setLoadingPreset] = useState<string | null>(null);
+  const [randomPresets, setRandomPresets] = useState<PresetImage[]>([]);
+  const [isLoadingPresets, setIsLoadingPresets] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Lorem Picsum API에서 랜덤 이미지 4개 가져오기
+  useEffect(() => {
+    const fetchRandomImages = async () => {
+      setIsLoadingPresets(true);
+      try {
+        // 랜덤 페이지에서 이미지 가져오기 (총 ~1000개 이미지 중에서)
+        const randomPage = Math.floor(Math.random() * 30) + 1;
+        const response = await fetch(
+          `https://picsum.photos/v2/list?page=${randomPage}&limit=30`
+        );
+
+        if (!response.ok) throw new Error('Failed to fetch images');
+
+        const images: PicsumImage[] = await response.json();
+
+        // 랜덤하게 4개 선택
+        const shuffled = images.sort(() => Math.random() - 0.5);
+        const selected = shuffled.slice(0, 4).map((img) => ({
+          id: img.id,
+          url: `https://picsum.photos/id/${img.id}/800/800`,
+          thumbnail: `https://picsum.photos/id/${img.id}/200/200`,
+          alt: `Photo by ${img.author}`,
+          author: img.author,
+        }));
+
+        setRandomPresets(selected);
+      } catch {
+        // 실패 시 기본 이미지 사용 (유명한 picsum 이미지들)
+        setRandomPresets([
+          { id: '1', url: 'https://picsum.photos/id/1/800/800', thumbnail: 'https://picsum.photos/id/1/200/200', alt: 'Laptop', author: 'Alejandro Escamilla' },
+          { id: '10', url: 'https://picsum.photos/id/10/800/800', thumbnail: 'https://picsum.photos/id/10/200/200', alt: 'Forest', author: 'Paul Jarvis' },
+          { id: '20', url: 'https://picsum.photos/id/20/800/800', thumbnail: 'https://picsum.photos/id/20/200/200', alt: 'Bird', author: 'Aleks Dorohovich' },
+          { id: '30', url: 'https://picsum.photos/id/30/800/800', thumbnail: 'https://picsum.photos/id/30/200/200', alt: 'Coffee', author: 'Jared Erondu' },
+        ]);
+      } finally {
+        setIsLoadingPresets(false);
+      }
+    };
+
+    fetchRandomImages();
+  }, []);
+
+  // 새로운 랜덤 이미지 가져오기
+  const refreshPresets = useCallback(async () => {
+    setIsLoadingPresets(true);
+    setError(null);
+    try {
+      const randomPage = Math.floor(Math.random() * 30) + 1;
+      const response = await fetch(
+        `https://picsum.photos/v2/list?page=${randomPage}&limit=30`
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch images');
+
+      const images: PicsumImage[] = await response.json();
+      const shuffled = images.sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, 4).map((img) => ({
+        id: img.id,
+        url: `https://picsum.photos/id/${img.id}/800/800`,
+        thumbnail: `https://picsum.photos/id/${img.id}/200/200`,
+        alt: `Photo by ${img.author}`,
+        author: img.author,
+      }));
+
+      setRandomPresets(selected);
+    } catch {
+      setError('이미지를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsLoadingPresets(false);
+    }
+  }, []);
 
   const processFile = useCallback((file: File) => {
     setError(null);
 
-    // 이미지 파일인지 확인
     if (!file.type.startsWith('image/')) {
       setError('이미지 파일만 업로드 가능합니다.');
       return;
     }
 
-    // 파일 크기 제한 (10MB)
     if (file.size > 10 * 1024 * 1024) {
       setError('파일 크기는 10MB 이하여야 합니다.');
       return;
@@ -212,45 +261,77 @@ export function ImageUploader({ onImageLoad }: ImageUploaderProps) {
 
       {/* 프리셋 이미지 선택 */}
       <div>
-        <p className="text-sm text-neutral-600 mb-3 text-center">
-          또는 아래 샘플 이미지로 시작해보세요
-        </p>
-        <div className="grid grid-cols-4 gap-2 sm:gap-3">
-          {PRESET_IMAGES.map((preset) => (
-            <button
-              key={preset.id}
-              data-testid="preset-image"
-              onClick={() => handlePresetSelect(preset)}
-              disabled={loadingPreset !== null}
-              className={`
-                relative aspect-square rounded-lg overflow-hidden
-                border-2 transition-all duration-200
-                ${loadingPreset === preset.id
-                  ? 'border-blue-500 opacity-70'
-                  : 'border-transparent hover:border-blue-400 hover:shadow-md'
-                }
-                ${loadingPreset !== null && loadingPreset !== preset.id ? 'opacity-50' : ''}
-              `}
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <p className="text-sm text-neutral-600">
+            또는 아래 샘플 이미지로 시작해보세요
+          </p>
+          <button
+            onClick={refreshPresets}
+            disabled={isLoadingPresets || loadingPreset !== null}
+            className="p-1 rounded-full hover:bg-neutral-100 transition-colors disabled:opacity-50"
+            title="다른 이미지 보기"
+          >
+            <svg
+              className={`w-4 h-4 text-neutral-500 ${isLoadingPresets ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={preset.thumbnail}
-                alt={preset.alt}
-                className="w-full h-full object-cover"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
-              {loadingPreset === preset.id && (
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            </svg>
+          </button>
+        </div>
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          {isLoadingPresets ? (
+            // 로딩 스켈레톤
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="aspect-square rounded-lg bg-neutral-200 animate-pulse"
+              />
+            ))
+          ) : (
+            randomPresets.map((preset) => (
+              <button
+                key={preset.id}
+                data-testid="preset-image"
+                onClick={() => handlePresetSelect(preset)}
+                disabled={loadingPreset !== null}
+                className={`
+                  relative aspect-square rounded-lg overflow-hidden
+                  border-2 transition-all duration-200
+                  ${loadingPreset === preset.id
+                    ? 'border-blue-500 opacity-70'
+                    : 'border-transparent hover:border-blue-400 hover:shadow-md'
+                  }
+                  ${loadingPreset !== null && loadingPreset !== preset.id ? 'opacity-50' : ''}
+                `}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={preset.thumbnail}
+                  alt={preset.alt}
+                  className="w-full h-full object-cover"
+                />
+                {loadingPreset === preset.id && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
+                  <p className="text-xs text-white truncate">{preset.author}</p>
                 </div>
-              )}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
-                <p className="text-xs text-white truncate">{preset.alt}</p>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
         <p className="text-xs text-neutral-400 text-center mt-2">
-          Images from Unsplash
+          Images from Lorem Picsum
         </p>
       </div>
 
