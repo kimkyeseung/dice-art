@@ -13,3 +13,4 @@ export { ShareDialog } from './ShareDialog';
 export { NicknameDialog } from './NicknameDialog';
 export { DeleteConfirmDialog } from './DeleteConfirmDialog';
 export { VirtualJoystick } from './VirtualJoystick';
+export { ProgressPreviewDialog } from './ProgressPreviewDialog';

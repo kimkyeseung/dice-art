@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, use, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, VirtualJoystick } from '@/components';
+import { Grid, DicePalette, ZoomControls, Switch, ShareDialog, NicknameDialog, VirtualJoystick, ProgressPreviewDialog } from '@/components';
 import type { PaletteValue } from '@/components';
 import { useUser } from '@/contexts/UserContext';
 import { GridState, DiceValue } from '@/types';
@@ -35,6 +35,9 @@ export default function WorkPage({ params }: WorkPageProps) {
 
   // 틀린 값 표시 상태
   const [showMismatch, setShowMismatch] = useState(false);
+
+  // 진행상황 미리보기 다이얼로그 상태
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
 
 
   // 사용자 상태
@@ -431,6 +434,7 @@ export default function WorkPage({ params }: WorkPageProps) {
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
                 onReset={resetZoom}
+                onPreview={() => setShowPreviewDialog(true)}
                 minScale={0.5}
                 maxScale={3}
               />
@@ -552,6 +556,14 @@ export default function WorkPage({ params }: WorkPageProps) {
           title={user ? '닉네임 변경' : '닉네임 설정'}
           description={user ? '새 닉네임을 입력해 주세요.' : '갤러리에서 사용할 닉네임을 입력해 주세요.'}
           submitLabel={user ? '변경' : '확인'}
+        />
+      )}
+
+      {/* 진행상황 미리보기 다이얼로그 */}
+      {showPreviewDialog && gridState && (
+        <ProgressPreviewDialog
+          gridState={gridState}
+          onClose={() => setShowPreviewDialog(false)}
         />
       )}
     </div>

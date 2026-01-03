@@ -58,6 +58,8 @@ Key functions in `src/utils/storage.ts`:
 - **Dice/NumberCell**: Render filled dice or target number respectively
 - **DicePalette** (`src/components/DicePalette.tsx`): Bottom toolbar for selecting dice value (0-6) or eraser. Keyboard shortcuts: 0-6 for dice, E for eraser. Mobile layout uses 2 rows (4+4), desktop uses single row
 - **VirtualJoystick** (`src/components/VirtualJoystick.tsx`): Mobile-only joystick for panning the grid view. Uses pointer events and requestAnimationFrame for smooth continuous movement
+- **ZoomControls** (`src/components/ZoomControls.tsx`): Zoom in/out buttons with progress preview button. Shows current zoom percentage
+- **ProgressPreviewDialog** (`src/components/ProgressPreviewDialog.tsx`): Modal dialog showing current progress as a canvas preview. Filled cells shown as dice, remaining cells as white grid
 
 ### State Management
 
