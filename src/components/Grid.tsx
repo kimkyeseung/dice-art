@@ -43,7 +43,8 @@ export const Grid = memo(function Grid({ gridState, cellSize = 24, selectedDice,
   });
 
   const totalCells = width * height;
-  const shouldVirtualize = totalCells >= VIRTUALIZATION_THRESHOLD;
+  // TODO: 테스트 후 복원
+  const shouldVirtualize = false; // totalCells >= VIRTUALIZATION_THRESHOLD;
 
   // 스크롤/리사이즈 시 보이는 영역 업데이트
   useEffect(() => {
