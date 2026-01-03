@@ -537,7 +537,8 @@ export default function WorkPage({ params }: WorkPageProps) {
             {/* 하단 컨트롤: 조이스틱(모바일) + 팔레트 */}
             <div className="flex-shrink-0 flex items-end gap-2 pb-2 sm:pb-0">
               {/* 조이스틱 - 모바일에서만 표시 (xs 미만: 64px, xs 이상: 80px) */}
-              <div className="sm:hidden flex-shrink-0">
+              {/* TODO: 테스트 후 복원 - 조이스틱 임시 비활성화 */}
+              {false && <div className="sm:hidden flex-shrink-0">
                 <div className="xs:hidden">
                   <VirtualJoystick
                     onMove={handlePan}
@@ -550,7 +551,7 @@ export default function WorkPage({ params }: WorkPageProps) {
                     size={80}
                   />
                 </div>
-              </div>
+              </div>}
               {/* 팔레트 */}
               <div className="flex-1">
                 <DicePalette
