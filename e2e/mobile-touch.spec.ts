@@ -319,7 +319,10 @@ test.describe('Mobile Touch Interactions', () => {
     }
   });
 
-  test('should show virtual joystick on mobile', async ({ page }) => {
+  test('should show virtual joystick on mobile', async ({ page, browserName }) => {
+    // 이 테스트는 모바일 뷰포트에서만 실행 (데스크톱에서는 조이스틱이 숨겨짐)
+    test.skip(browserName === 'chromium', 'This test is for mobile viewports only');
+
     const presetImage = page.locator('[data-testid="preset-image"]').first();
     await expect(presetImage).toBeVisible({ timeout: 10000 });
     await presetImage.click();

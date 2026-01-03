@@ -14,6 +14,7 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
   const animationFrameRef = useRef<number | null>(null);
   const lastMoveRef = useRef({ x: 0, y: 0 });
   const isActiveRef = useRef(false); // 즉시 체크용 ref
+  const centerRef = useRef({ x: 0, y: 0 }); // getBoundingClientRect 캐싱용
 
   const knobSize = size * 0.4;
   const maxDistance = (size - knobSize) / 2;
@@ -46,27 +47,14 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
     animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (animationFrameRef.current) {
+      if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null; // 메모리 누수 방지
       }
     };
   }, [isActive]);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    setIsActive(true);
-    isActiveRef.current = true;
-
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      updateKnobPosition(e.clientX - centerX, e.clientY - centerY);
-    }
-  }, []);
-
+  // updateKnobPosition을 먼저 선언 (handlePointerDown, handlePointerMove에서 사용)
   const updateKnobPosition = useCallback((rawX: number, rawY: number) => {
     // 최대 거리 제한
     const distance = Math.sqrt(rawX * rawX + rawY * rawY);
@@ -88,24 +76,56 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
     };
   }, [maxDistance]);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isActive) return;
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
     e.stopPropagation();
 
+    // Pointer capture with error handling
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer capture may fail in some edge cases
+    }
+
+    setIsActive(true);
+    isActiveRef.current = true;
+
+    // getBoundingClientRect 결과 캐싱
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      updateKnobPosition(e.clientX - centerX, e.clientY - centerY);
+      centerRef.current = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      updateKnobPosition(e.clientX - centerRef.current.x, e.clientY - centerRef.current.y);
     }
-  }, [isActive, updateKnobPosition]);
+  }, [updateKnobPosition]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // isActiveRef 사용으로 불필요한 리렌더링 방지
+    if (!isActiveRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 캐시된 center 좌표 사용 (getBoundingClientRect 반복 호출 방지)
+    updateKnobPosition(e.clientX - centerRef.current.x, e.clientY - centerRef.current.y);
+  }, [updateKnobPosition]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    isActiveRef.current = false; // 즉시 애니메이션 중단
-    lastMoveRef.current = { x: 0, y: 0 }; // 이동값 먼저 초기화
+    // 1. Ref 먼저 초기화 (애니메이션 즉시 중단)
+    isActiveRef.current = false;
+    lastMoveRef.current = { x: 0, y: 0 };
+
+    // 2. 상태 업데이트
     setIsActive(false);
     setKnobPosition({ x: 0, y: 0 });
+
+    // 3. Pointer capture 해제 (에러 핸들링 포함)
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // 이미 해제되었거나 유효하지 않은 경우
+    }
   }, []);
 
   return (
