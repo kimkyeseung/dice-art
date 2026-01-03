@@ -104,8 +104,8 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     // isActiveRef 사용으로 불필요한 리렌더링 방지
     if (!isActiveRef.current) return;
-    e.preventDefault();
     e.stopPropagation();
+    // preventDefault는 touch-none CSS로 대체 (passive 이벤트 경고 방지)
 
     // 캐시된 center 좌표 사용 (getBoundingClientRect 반복 호출 방지)
     updateKnobPosition(e.clientX - centerRef.current.x, e.clientY - centerRef.current.y);
