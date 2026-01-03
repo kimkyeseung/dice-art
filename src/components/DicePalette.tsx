@@ -3,8 +3,8 @@
 import { DiceValue } from '@/types';
 import { Dice } from './Dice';
 
-// 지우개를 포함한 선택 가능한 값
-export type PaletteValue = DiceValue | 'eraser';
+// 지우개와 패닝을 포함한 선택 가능한 값
+export type PaletteValue = DiceValue | 'eraser' | 'pan';
 
 interface DicePaletteProps {
   selectedValue: PaletteValue | null;
@@ -28,64 +28,53 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
       data-testid={`dice-button-${value}`}
       onClick={() => onSelect(value)}
       className={`
-        p-1 sm:p-2 rounded-lg transition-all duration-150
+        p-0.5 sm:p-2 rounded-md sm:rounded-lg transition-all duration-150
         hover:bg-neutral-200 hover:scale-105
         focus:outline-none focus:ring-2 focus:ring-blue-400
         active:scale-95
         ${selectedValue === value
-          ? 'bg-blue-100 ring-2 ring-blue-500 scale-110'
+          ? 'bg-blue-100 ring-2 ring-blue-500 scale-105 sm:scale-110'
           : 'bg-transparent'
         }
       `}
       title={`주사위 ${value} 선택 (단축키: ${value})`}
     >
-      <div className="scale-75 sm:scale-100">
+      {/* 모바일: 36px, 데스크탑: 48px */}
+      <div className="sm:hidden">
+        <Dice value={value} size={36} />
+      </div>
+      <div className="hidden sm:block">
         <Dice value={value} size={48} />
       </div>
     </button>
   );
 
-  const renderEraserButton = () => {
-    const size = 48;
-    const borderRadius = Math.round(size * 0.15);
+  const renderToolButton = (tool: 'eraser' | 'pan') => {
+    const isEraser = tool === 'eraser';
 
-    return (
-      <button
-        key="eraser"
-        data-testid="dice-button-eraser"
-        onClick={() => onSelect('eraser')}
-        className={`
-          p-1 sm:p-2 rounded-lg transition-all duration-150
-          hover:bg-neutral-200 hover:scale-105
-          focus:outline-none focus:ring-2 focus:ring-blue-400
-          active:scale-95
-          ${selectedValue === 'eraser'
-            ? 'bg-blue-100 ring-2 ring-blue-500 scale-110'
-            : 'bg-transparent'
-          }
-        `}
-        title="지우개 (단축키: E)"
-      >
-        <div className="scale-75 sm:scale-100">
-          {/* 주사위와 동일한 스타일의 박스 */}
-          <div
-            className="relative bg-neutral-900 flex items-center justify-center"
-            style={{
-              width: size,
-              height: size,
-              borderRadius: borderRadius,
-              boxShadow: `
-                inset 1px 1px 2px rgba(255,255,255,0.1),
-                inset -1px -1px 2px rgba(0,0,0,0.3),
-                0 2px 4px rgba(0,0,0,0.3)
-              `,
-            }}
-          >
-            {/* 흰색 지우개 아이콘 */}
+    const renderIcon = (iconSize: number) => {
+      const borderRadius = Math.round(iconSize * 0.15);
+      const svgSize = Math.round(iconSize * 0.58);
+
+      return (
+        <div
+          className="relative bg-neutral-900 flex items-center justify-center"
+          style={{
+            width: iconSize,
+            height: iconSize,
+            borderRadius: borderRadius,
+            boxShadow: `
+              inset 1px 1px 2px rgba(255,255,255,0.1),
+              inset -1px -1px 2px rgba(0,0,0,0.3),
+              0 2px 4px rgba(0,0,0,0.3)
+            `,
+          }}
+        >
+          {isEraser ? (
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
+              width={svgSize}
+              height={svgSize}
               viewBox="0 0 24 24"
               fill="none"
               stroke="white"
@@ -97,7 +86,51 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
               <path d="M22 21H7" />
               <path d="m5 11 9 9" />
             </svg>
-          </div>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width={svgSize}
+              height={svgSize}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+              <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
+              <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
+              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+            </svg>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <button
+        key={tool}
+        data-testid={`dice-button-${tool}`}
+        onClick={() => onSelect(tool)}
+        className={`
+          p-0.5 sm:p-2 rounded-md sm:rounded-lg transition-all duration-150
+          hover:bg-neutral-200 hover:scale-105
+          focus:outline-none focus:ring-2 focus:ring-blue-400
+          active:scale-95
+          ${selectedValue === tool
+            ? 'bg-blue-100 ring-2 ring-blue-500 scale-105 sm:scale-110'
+            : 'bg-transparent'
+          }
+        `}
+        title={isEraser ? '지우개 (단축키: E)' : '이동 모드 (단축키: P)'}
+      >
+        {/* 모바일: 36px, 데스크탑: 48px */}
+        <div className="sm:hidden">
+          {renderIcon(36)}
+        </div>
+        <div className="hidden sm:block">
+          {renderIcon(48)}
         </div>
       </button>
     );
@@ -108,20 +141,21 @@ export function DicePalette({ selectedValue, onSelect, hidden = false }: DicePal
       <legend className="px-2 text-xs sm:text-sm font-medium text-neutral-600 pointer-events-none">
         주사위 선택
       </legend>
-      {/* 모바일: 2줄 배치 (4+4) */}
-      <div className="sm:hidden flex flex-col gap-1 items-center">
-        <div className="flex gap-1.5 items-center justify-center">
-          {topRowValues.map(renderDiceButton)}
+      {/* 모바일: 2줄 배치 (5+4) - 9개 버튼 */}
+      <div className="sm:hidden flex flex-col gap-0.5 items-center">
+        <div className="flex gap-0.5 items-center justify-center">
+          {[0, 1, 2, 3, 4].map(v => renderDiceButton(v as DiceValue))}
         </div>
-        <div className="flex gap-1.5 items-center justify-center">
-          {bottomRowValues.map(renderDiceButton)}
-          {renderEraserButton()}
+        <div className="flex gap-0.5 items-center justify-center">
+          {[5, 6].map(v => renderDiceButton(v as DiceValue))}
+          {renderToolButton('eraser')}
+          {renderToolButton('pan')}
         </div>
       </div>
       {/* 데스크탑: 1줄 배치 */}
       <div className="hidden sm:flex gap-3 items-center justify-center">
         {allValues.map(renderDiceButton)}
-        {renderEraserButton()}
+        {renderToolButton('eraser')}
       </div>
       <p className="text-xs text-neutral-500 text-center mt-1.5 sm:mt-2 hidden sm:block">
         키보드 0-6, E(지우개)로 선택할 수 있습니다
