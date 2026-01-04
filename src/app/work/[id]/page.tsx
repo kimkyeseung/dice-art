@@ -90,11 +90,25 @@ export default function WorkPage({ params }: WorkPageProps) {
   const { processImage: processImageWorker, isSupported: isWorkerSupported } =
     useImageProcessorWorker();
 
-  // 섹션 레이아웃 계산 (그리드가 큰 경우에만)
+  // 모바일 여부 확인
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // 섹션 레이아웃 계산 (모바일에서 그리드가 큰 경우에만)
   const sectionLayout = useMemo<SectionLayout | null>(() => {
     if (!gridState) return null;
+    // PC에서는 섹션 분할하지 않음
+    if (!isMobile) return null;
     return calculateSectionLayout(gridState.width, gridState.height);
-  }, [gridState]);
+  }, [gridState, isMobile]);
 
   // 현재 섹션 정보
   const currentSection = useMemo(() => {
