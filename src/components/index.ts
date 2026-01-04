@@ -15,3 +15,4 @@ export { DeleteConfirmDialog } from './DeleteConfirmDialog';
 export { VirtualJoystick } from './VirtualJoystick';
 export { ProgressPreviewDialog } from './ProgressPreviewDialog';
 export { SectionNavigator } from './SectionNavigator';
+export { DebugControls } from './DebugControls';

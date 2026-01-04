@@ -12,6 +12,7 @@ import {
   NicknameDialog,
   ProgressPreviewDialog,
   SectionNavigator,
+  DebugControls,
 } from "@/components";
 import type { PaletteValue } from "@/components";
 import { useUser } from "@/contexts/UserContext";
@@ -30,6 +31,7 @@ import {
   calculateSectionLayout,
   extractSectionGrid,
 } from "@/utils/sectionUtils";
+import { fillCorrect } from "@/utils/debugUtils";
 
 interface WorkPageProps {
   params: Promise<{ id: string }>;
@@ -260,13 +262,22 @@ export default function WorkPage({ params }: WorkPageProps) {
     []
   );
 
-  // 키보드 단축키 (0-6으로 주사위 선택, E로 지우개)
+  // 키보드 단축키 (0-6으로 주사위 선택, E로 지우개, Ctrl+Shift+D로 정답 채우기)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
       ) {
+        return;
+      }
+
+      // Ctrl+Shift+D: 정답대로 채우기 (디버그)
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        if (gridState) {
+          setGridState(fillCorrect(gridState));
+        }
         return;
       }
 
@@ -280,7 +291,7 @@ export default function WorkPage({ params }: WorkPageProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [gridState]);
 
   const progress = gridState ? calculateProgress(gridState) : 0;
   const isComplete = gridState ? isGridComplete(gridState) : false;
@@ -730,6 +741,11 @@ export default function WorkPage({ params }: WorkPageProps) {
           gridState={gridState}
           onClose={() => setShowPreviewDialog(false)}
         />
+      )}
+
+      {/* 디버그 컨트롤 (개발 환경 전용) */}
+      {gridState && (
+        <DebugControls gridState={gridState} onGridUpdate={setGridState} />
       )}
     </div>
   );
