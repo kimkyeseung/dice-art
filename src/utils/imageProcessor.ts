@@ -2,7 +2,7 @@ import { DiceValue, GridState, CellState } from '@/types';
 
 // 그리드 크기 설정
 const MIN_GRID_SIZE = 10; // 최소 셀 개수
-const MAX_GRID_SIZE = 100; // 최대 셀 개수 (한 축 기준)
+const MAX_GRID_SIZE = 200; // 최대 셀 개수 (한 축 기준, 4배까지 지원)
 const DEFAULT_CELL_COUNT = 50; // 기본 긴 쪽 셀 개수
 
 interface GridDimensions {

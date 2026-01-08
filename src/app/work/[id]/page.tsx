@@ -506,13 +506,15 @@ export default function WorkPage({ params }: WorkPageProps) {
                     >
                       갤러리에 공유
                     </button>
-                    <button
-                      onClick={handleHigherResolution}
-                      className="px-4 sm:px-6 py-2 sm:py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
-                    >
-                      2배 해상도로 도전 ({gridState.width * 2}×
-                      {gridState.height * 2})
-                    </button>
+                    {maxDimension < 200 && (
+                      <button
+                        onClick={handleHigherResolution}
+                        className="px-4 sm:px-6 py-2 sm:py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
+                      >
+                        {maxDimension / 25}배 해상도로 도전 ({gridState.width * 2}×
+                        {gridState.height * 2})
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

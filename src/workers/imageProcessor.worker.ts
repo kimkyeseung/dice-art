@@ -16,7 +16,7 @@ interface GridState {
 }
 
 const MIN_GRID_SIZE = 10;
-const MAX_GRID_SIZE = 100;
+const MAX_GRID_SIZE = 200; // 4배까지 지원
 
 interface ProcessImageMessage {
   type: 'processImage';
