@@ -47,6 +47,25 @@ const jsonLd = {
   inLanguage: 'ko',
 };
 
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: '홈',
+      item: siteUrl,
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: '갤러리',
+      item: `${siteUrl}/gallery`,
+    },
+  ],
+};
+
 export default function GalleryLayout({
   children,
 }: {
@@ -57,6 +76,10 @@ export default function GalleryLayout({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       {children}
     </>

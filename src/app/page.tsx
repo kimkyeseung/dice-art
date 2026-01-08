@@ -156,7 +156,7 @@ export default function Home() {
           >
             <Image
               src="/images/before.png"
-              alt="원본 이미지"
+              alt="주사위 아트 변환 전 원본 사진 - Dice Art 예시"
               fill
               className="object-cover object-center"
               priority
@@ -171,7 +171,7 @@ export default function Home() {
           >
             <Image
               src="/images/after.png"
-              alt="주사위 아트 결과"
+              alt="주사위 모자이크로 변환된 아트 결과물 - Dice Art로 생성"
               fill
               className="object-cover object-center"
               priority
@@ -233,7 +233,7 @@ export default function Home() {
                   >
                     <Image
                       src="/images/before.png"
-                      alt="원본 이미지"
+                      alt="주사위 아트 변환 전 원본 사진 - Dice Art 예시"
                       fill
                       className="object-cover"
                       priority
@@ -248,7 +248,7 @@ export default function Home() {
                   >
                     <Image
                       src="/images/after.png"
-                      alt="주사위 아트 결과"
+                      alt="주사위 모자이크로 변환된 아트 결과물 - Dice Art로 생성"
                       fill
                       className="object-cover"
                       priority
