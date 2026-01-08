@@ -55,6 +55,7 @@ function saveWorksList(works: WorkEntry[]): void {
 
 /**
  * 작업 상태를 localStorage에 저장합니다.
+ * @throws {Error} localStorage 저장 실패 시 에러를 throw합니다.
  */
 export function saveWork(
   workId: string,
@@ -72,32 +73,28 @@ export function saveWork(
     updatedAt: now,
   };
 
-  try {
-    // 개별 작업 저장
-    localStorage.setItem(`${WORK_KEY_PREFIX}${workId}`, JSON.stringify(workState));
+  // 개별 작업 저장 (실패 시 에러 throw)
+  localStorage.setItem(`${WORK_KEY_PREFIX}${workId}`, JSON.stringify(workState));
 
-    // 작업 목록 업데이트
-    const works = listWorks();
-    const existingIndex = works.findIndex(w => w.id === workId);
-    const workEntry: WorkEntry = {
-      id: workId,
-      gridSize: `${gridState.width} × ${gridState.height}`,
-      progress: calculateProgress(gridState),
-      createdAt: workState.createdAt,
-      updatedAt: now,
-    };
+  // 작업 목록 업데이트
+  const works = listWorks();
+  const existingIndex = works.findIndex(w => w.id === workId);
+  const workEntry: WorkEntry = {
+    id: workId,
+    gridSize: `${gridState.width} × ${gridState.height}`,
+    progress: calculateProgress(gridState),
+    createdAt: workState.createdAt,
+    updatedAt: now,
+  };
 
-    if (existingIndex >= 0) {
-      works[existingIndex] = workEntry;
-    } else {
-      works.unshift(workEntry); // 새 작업은 맨 앞에
-    }
-
-    saveWorksList(works);
-    console.log('[Dice Art] 작업이 저장되었습니다.', new Date().toLocaleTimeString());
-  } catch (error) {
-    console.error('[Dice Art] 저장 실패:', error);
+  if (existingIndex >= 0) {
+    works[existingIndex] = workEntry;
+  } else {
+    works.unshift(workEntry); // 새 작업은 맨 앞에
   }
+
+  saveWorksList(works);
+  console.log('[Dice Art] 작업이 저장되었습니다.', new Date().toLocaleTimeString());
 
   return workState;
 }

@@ -52,7 +52,7 @@ export default function Home() {
 
       const workId = generateWorkId();
 
-      // 새 작업 저장
+      // 새 작업 저장 (실패 시 에러 throw)
       saveWork(workId, grid, imageData);
 
       // work 페이지로 이동
@@ -60,6 +60,13 @@ export default function Home() {
     } catch (error) {
       console.error('이미지 처리 실패:', error);
       setIsProcessing(false);
+
+      // localStorage 용량 초과 에러 처리
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        alert('저장 공간이 부족합니다. 내 작업에서 기존 작업을 삭제해주세요.');
+      } else {
+        alert('이미지 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
     }
   }, [router, isWorkerSupported, processImageWorker]);
 
