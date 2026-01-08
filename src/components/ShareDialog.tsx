@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { GridState } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { NicknameDialog } from './NicknameDialog';
+import { generateResizedImages } from '@/utils/imageResize';
 
 interface ShareDialogProps {
   gridState: GridState;
-  imageData: string; // base64 encoded PNG
+  imageData: string; // base64 encoded PNG (원본)
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -41,6 +42,9 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
     setError(null);
 
     try {
+      // 3종 이미지 생성 (thumbnail, preview, original)
+      const resizedImages = await generateResizedImages(imageData);
+
       const response = await fetch('/api/artworks', {
         method: 'POST',
         headers: {
@@ -50,7 +54,9 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
           title: title.trim(),
           authorName: user.nickname,
           gridState,
-          imageData,
+          imageData: resizedImages.original,
+          thumbnailData: resizedImages.thumbnail,
+          previewData: resizedImages.preview,
         }),
       });
 

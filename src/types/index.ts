@@ -40,8 +40,9 @@ export interface Artwork {
   title: string;
   authorName: string;
   gridState: GridState;
-  imageUrl: string; // 렌더링된 PNG 이미지 URL
-  thumbnailUrl: string; // 썸네일 이미지 URL
+  imageUrl: string; // 원본 PNG 이미지 URL (다운로드용)
+  thumbnailUrl: string; // 썸네일 이미지 URL (~150px, 갤러리 목록용)
+  previewUrl: string; // 미리보기 이미지 URL (~600px, 상세 페이지용)
   width: number;
   height: number;
   createdAt: string; // ISO 8601
@@ -65,7 +66,9 @@ export interface CreateArtworkRequest {
   title: string;
   authorName: string;
   gridState: GridState;
-  imageData: string; // base64 encoded PNG
+  imageData: string; // base64 encoded PNG (원본, 다운로드용)
+  thumbnailData: string; // base64 encoded PNG (~150px, 갤러리 목록용)
+  previewData: string; // base64 encoded PNG (~600px, 상세 페이지용)
 }
 
 // 작품 목록 응답
