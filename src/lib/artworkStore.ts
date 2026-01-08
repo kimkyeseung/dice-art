@@ -34,6 +34,8 @@ function toArtworkListItem(dbArtwork: {
   id: string;
   title: string;
   authorName: string;
+  thumbnailData: string | null;
+  imageData: string;
   width: number;
   height: number;
   likes: number;
@@ -43,7 +45,7 @@ function toArtworkListItem(dbArtwork: {
     id: dbArtwork.id,
     title: dbArtwork.title,
     authorName: dbArtwork.authorName,
-    thumbnailUrl: `/api/artworks/${dbArtwork.id}/thumbnail`,
+    thumbnailData: dbArtwork.thumbnailData || dbArtwork.imageData, // 하위 호환
     width: dbArtwork.width,
     height: dbArtwork.height,
     likes: dbArtwork.likes,
@@ -85,6 +87,8 @@ export async function getArtworks(
         id: true,
         title: true,
         authorName: true,
+        thumbnailData: true,
+        imageData: true, // thumbnailData 없는 경우 대비 (하위 호환)
         width: true,
         height: true,
         likes: true,

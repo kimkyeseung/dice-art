@@ -54,7 +54,7 @@ export interface ArtworkListItem {
   id: string;
   title: string;
   authorName: string;
-  thumbnailUrl: string;
+  thumbnailData: string; // base64 encoded PNG (~150px)
   width: number;
   height: number;
   createdAt: string;
