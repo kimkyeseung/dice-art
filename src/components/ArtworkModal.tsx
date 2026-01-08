@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Artwork } from '@/types';
 import Image from 'next/image';
+import { CommentSection } from './CommentSection';
 
 interface ArtworkModalProps {
   artwork: Artwork;
@@ -79,12 +80,15 @@ export function ArtworkModal({ artwork, onClose, onLike }: ArtworkModalProps) {
               alt={artwork.title}
               width={artwork.width * 30}
               height={artwork.height * 30}
-              className="object-contain max-h-[60vh]"
+              className="object-contain max-h-[40vh]"
               style={{ width: 'auto', height: 'auto' }}
               priority
             />
           </div>
         </div>
+
+        {/* 댓글 섹션 */}
+        <CommentSection artworkId={artwork.id} />
 
         {/* 푸터 */}
         <div className="p-4 border-t border-neutral-200 flex items-center justify-between">

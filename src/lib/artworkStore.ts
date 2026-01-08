@@ -1,4 +1,4 @@
-import { Artwork, ArtworkListItem, CreateArtworkRequest, GridState } from '@/types';
+import { Artwork, ArtworkListItem, CreateArtworkRequest, GridState, Comment, CreateCommentRequest } from '@/types';
 import prisma from './prisma';
 
 // Prisma 모델을 API 타입으로 변환
@@ -207,6 +207,84 @@ export function validateCreateArtworkRequest(body: unknown): body is CreateArtwo
   if (typeof req.thumbnailData !== 'string' || !req.thumbnailData.startsWith('data:image/')) return false;
   if (typeof req.previewData !== 'string' || !req.previewData.startsWith('data:image/')) return false;
   if (!validateGridState(req.gridState)) return false;
+
+  return true;
+}
+
+// ===== 댓글 관련 함수 =====
+
+// Prisma Comment를 API 타입으로 변환
+function toComment(dbComment: {
+  id: string;
+  content: string;
+  authorName: string;
+  artworkId: string;
+  createdAt: Date;
+}): Comment {
+  return {
+    id: dbComment.id,
+    content: dbComment.content,
+    authorName: dbComment.authorName,
+    artworkId: dbComment.artworkId,
+    createdAt: dbComment.createdAt.toISOString(),
+  };
+}
+
+// 댓글 생성
+export async function createComment(
+  artworkId: string,
+  request: CreateCommentRequest
+): Promise<Comment> {
+  const comment = await prisma.comment.create({
+    data: {
+      content: request.content,
+      authorName: request.authorName,
+      artworkId,
+    },
+  });
+
+  return toComment(comment);
+}
+
+// 댓글 목록 조회
+export async function getComments(
+  artworkId: string
+): Promise<{ comments: Comment[]; total: number }> {
+  const [comments, total] = await Promise.all([
+    prisma.comment.findMany({
+      where: { artworkId },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.comment.count({ where: { artworkId } }),
+  ]);
+
+  return {
+    comments: comments.map(toComment),
+    total,
+  };
+}
+
+// 댓글 삭제
+export async function deleteComment(id: string): Promise<boolean> {
+  try {
+    await prisma.comment.delete({
+      where: { id },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// CreateCommentRequest 유효성 검사
+export function validateCreateCommentRequest(body: unknown): body is CreateCommentRequest {
+  if (!body || typeof body !== 'object') return false;
+
+  const req = body as Record<string, unknown>;
+
+  if (typeof req.content !== 'string' || req.content.trim().length === 0) return false;
+  if (typeof req.authorName !== 'string' || req.authorName.trim().length === 0) return false;
+  if (req.content.length > 500) return false; // 최대 500자
 
   return true;
 }

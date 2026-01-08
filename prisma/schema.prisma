@@ -12,18 +12,31 @@ datasource db {
 }
 
 model Artwork {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   title         String
   authorName    String
-  gridState     String   // JSON string
-  imageData     String   // base64 encoded PNG (original, for download)
-  thumbnailData String?  // base64 encoded PNG (~150px, for gallery list)
-  previewData   String?  // base64 encoded PNG (~600px, for detail page)
+  gridState     String    // JSON string
+  imageData     String    // base64 encoded PNG (original, for download)
+  thumbnailData String?   // base64 encoded PNG (~150px, for gallery list)
+  previewData   String?   // base64 encoded PNG (~600px, for detail page)
   width         Int
   height        Int
-  likes         Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  likes         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  comments      Comment[]
 
+  @@index([createdAt])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  content    String
+  authorName String
+  artworkId  String
+  artwork    Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([artworkId])
   @@index([createdAt])
 }

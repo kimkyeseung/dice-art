@@ -86,6 +86,29 @@ export interface ApiErrorResponse {
   message: string;
 }
 
+// ===== 댓글 타입 =====
+
+// 댓글
+export interface Comment {
+  id: string;
+  content: string;
+  authorName: string;
+  artworkId: string;
+  createdAt: string; // ISO 8601
+}
+
+// 댓글 작성 요청
+export interface CreateCommentRequest {
+  content: string;
+  authorName: string;
+}
+
+// 댓글 목록 응답
+export interface CommentListResponse {
+  comments: Comment[];
+  total: number;
+}
+
 // ===== 섹션 분할 타입 =====
 
 // 섹션 정보
