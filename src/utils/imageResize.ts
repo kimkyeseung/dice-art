@@ -5,12 +5,12 @@
 
 export interface ResizedImages {
   thumbnail: string; // ~150px, 갤러리 목록용
-  preview: string;   // ~600px, 상세 페이지용
+  preview: string;   // ~900px, 상세 페이지용
   original: string;  // 원본, 다운로드용
 }
 
 const THUMBNAIL_SIZE = 150;
-const PREVIEW_SIZE = 600;
+const PREVIEW_SIZE = 900;
 
 /**
  * 이미지를 지정된 최대 크기로 리사이즈합니다.
