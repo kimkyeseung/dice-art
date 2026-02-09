@@ -56,11 +56,9 @@ export function renderGridToCanvas(
   cellSize: number = 60
 ): HTMLCanvasElement {
   const { cells, width, height } = gridState;
-  const gap = 2; // 셀 간격
-  const padding = 4; // 전체 패딩
 
-  const canvasWidth = padding * 2 + width * cellSize + (width - 1) * gap;
-  const canvasHeight = padding * 2 + height * cellSize + (height - 1) * gap;
+  const canvasWidth = width * cellSize;
+  const canvasHeight = height * cellSize;
 
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -71,16 +69,12 @@ export function renderGridToCanvas(
     throw new Error('Canvas context를 생성할 수 없습니다.');
   }
 
-  // 배경 (연한 회색)
-  ctx.fillStyle = '#d4d4d4';
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-  // 각 셀 그리기
+  // 각 셀 그리기 (여백 없이 빈틈없이 배치)
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const cell = cells[row][col];
-      const x = padding + col * (cellSize + gap);
-      const y = padding + row * (cellSize + gap);
+      const x = col * cellSize;
+      const y = row * cellSize;
 
       // 채워진 셀만 주사위로 그리기
       // filledValue가 있으면 그 값으로, 없으면 targetValue로 그리기
