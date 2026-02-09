@@ -87,9 +87,9 @@ export function renderGridToCanvas(
 }
 
 /**
- * Canvas를 이미지 파일로 다운로드합니다.
+ * Canvas를 이미지 파일로 다운로드합니다. (내부 함수)
  */
-export function downloadCanvasAsImage(
+function downloadCanvasAsImage(
   canvas: HTMLCanvasElement,
   filename: string = 'dice-art.png'
 ) {

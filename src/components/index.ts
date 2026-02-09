@@ -1,9 +1,6 @@
-export { Dice } from './Dice';
-export { NumberCell } from './NumberCell';
 export { DicePalette } from './DicePalette';
 export type { PaletteValue } from './DicePalette';
 export { ImageUploader } from './ImageUploader';
-export { Grid } from './Grid';
 export { CanvasGrid } from './CanvasGrid';
 export { ResumeWorkDialog } from './ResumeWorkDialog';
 export { ZoomControls } from './ZoomControls';
@@ -13,7 +10,6 @@ export { ArtworkModal } from './ArtworkModal';
 export { ShareDialog } from './ShareDialog';
 export { NicknameDialog } from './NicknameDialog';
 export { DeleteConfirmDialog } from './DeleteConfirmDialog';
-export { VirtualJoystick } from './VirtualJoystick';
 export { ProgressPreviewDialog } from './ProgressPreviewDialog';
 export { SectionNavigator } from './SectionNavigator';
 export { DebugControls } from './DebugControls';
