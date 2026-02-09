@@ -36,7 +36,6 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
   // autoTrigger가 true면 자동으로 파일 선택 다이얼로그 열기
   useEffect(() => {
     if (autoTrigger && fileInputRef.current) {
-      // 약간의 딜레이를 줘서 페이지 렌더링 완료 후 실행
       const timer = setTimeout(() => {
         fileInputRef.current?.click();
       }, 100);
@@ -49,7 +48,6 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
     const fetchRandomImages = async () => {
       setIsLoadingPresets(true);
       try {
-        // 랜덤 페이지에서 이미지 가져오기 (총 ~1000개 이미지 중에서)
         const randomPage = Math.floor(Math.random() * 30) + 1;
         const response = await fetch(
           `https://picsum.photos/v2/list?page=${randomPage}&limit=30`
@@ -58,8 +56,6 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
         if (!response.ok) throw new Error('Failed to fetch images');
 
         const images: PicsumImage[] = await response.json();
-
-        // 랜덤하게 4개 선택
         const shuffled = images.sort(() => Math.random() - 0.5);
         const selected = shuffled.slice(0, 4).map((img) => ({
           id: img.id,
@@ -71,7 +67,6 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
 
         setRandomPresets(selected);
       } catch {
-        // 실패 시 기본 이미지 사용 (유명한 picsum 이미지들)
         setRandomPresets([
           { id: '1', url: 'https://picsum.photos/id/1/800/800', thumbnail: 'https://picsum.photos/id/1/200/200', alt: 'Laptop', author: 'Alejandro Escamilla' },
           { id: '10', url: 'https://picsum.photos/id/10/800/800', thumbnail: 'https://picsum.photos/id/10/200/200', alt: 'Forest', author: 'Paul Jarvis' },
@@ -224,12 +219,12 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          relative border-2 border-dashed rounded-xl p-8 sm:p-12
+          relative rounded-2xl p-8 sm:p-10
           flex flex-col items-center justify-center gap-4
-          cursor-pointer transition-all duration-200
+          cursor-pointer transition-all duration-300
           ${isDragging
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50'
+            ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-400 shadow-lg shadow-blue-500/10'
+            : 'bg-neutral-50 border-2 border-dashed border-neutral-200 hover:border-neutral-300 hover:bg-neutral-100/50'
           }
         `}
       >
@@ -243,11 +238,14 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
 
         {/* 아이콘 */}
         <div className={`
-          w-16 h-16 rounded-full flex items-center justify-center
-          ${isDragging ? 'bg-blue-100' : 'bg-neutral-100'}
+          w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300
+          ${isDragging
+            ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30 scale-110'
+            : 'bg-white shadow-md'
+          }
         `}>
           <svg
-            className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-neutral-400'}`}
+            className={`w-8 h-8 transition-colors duration-300 ${isDragging ? 'text-white' : 'text-neutral-400'}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -255,7 +253,7 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
+              strokeWidth={1.5}
               d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
@@ -263,29 +261,47 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
 
         {/* 텍스트 */}
         <div className="text-center">
-          <p className={`text-lg font-medium ${isDragging ? 'text-blue-600' : 'text-neutral-700'}`}>
-            {isDragging ? '여기에 놓으세요' : '이미지를 드래그하거나 클릭하세요'}
+          <p className={`text-lg font-semibold transition-colors duration-300 ${
+            isDragging ? 'text-blue-600' : 'text-neutral-700'
+          }`}>
+            {isDragging ? '여기에 놓으세요!' : '이미지 업로드'}
           </p>
-          <p className="text-sm text-neutral-500 mt-1">
-            PNG, JPG, GIF (최대 10MB)
+          <p className="text-sm text-neutral-400 mt-1">
+            드래그 또는 클릭하여 선택
           </p>
         </div>
+
+        {/* 지원 포맷 */}
+        <div className="flex items-center gap-2 text-xs text-neutral-400">
+          <span className="px-2 py-1 bg-white rounded-lg shadow-sm">PNG</span>
+          <span className="px-2 py-1 bg-white rounded-lg shadow-sm">JPG</span>
+          <span className="px-2 py-1 bg-white rounded-lg shadow-sm">GIF</span>
+          <span className="text-neutral-300">•</span>
+          <span>최대 10MB</span>
+        </div>
+      </div>
+
+      {/* 구분선 */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 h-px bg-neutral-200" />
+        <span className="text-sm text-neutral-400 font-medium">또는</span>
+        <div className="flex-1 h-px bg-neutral-200" />
       </div>
 
       {/* 프리셋 이미지 선택 */}
       <div>
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <p className="text-sm text-neutral-600">
-            또는 아래 샘플 이미지로 시작해보세요
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-medium text-neutral-600">
+            샘플 이미지로 시작하기
           </p>
           <button
             onClick={refreshPresets}
             disabled={isLoadingPresets || loadingPreset !== null}
-            className="p-1 rounded-full hover:bg-neutral-100 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-all disabled:opacity-50"
             title="다른 이미지 보기"
           >
             <svg
-              className={`w-4 h-4 text-neutral-500 ${isLoadingPresets ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 ${isLoadingPresets ? 'animate-spin' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -297,15 +313,16 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
+            <span className="hidden sm:inline">새로고침</span>
           </button>
         </div>
-        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+
+        <div className="grid grid-cols-4 gap-3">
           {isLoadingPresets ? (
-            // 로딩 스켈레톤
             Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="aspect-square rounded-lg bg-neutral-200 animate-pulse"
+                className="aspect-square rounded-xl bg-neutral-100 animate-pulse"
               />
             ))
           ) : (
@@ -316,11 +333,11 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
                 onClick={() => handlePresetSelect(preset)}
                 disabled={loadingPreset !== null}
                 className={`
-                  relative aspect-square rounded-lg overflow-hidden
-                  border-2 transition-all duration-200
+                  relative aspect-square rounded-xl overflow-hidden
+                  transition-all duration-300 group
                   ${loadingPreset === preset.id
-                    ? 'border-blue-500 opacity-70'
-                    : 'border-transparent hover:border-blue-400 hover:shadow-md'
+                    ? 'ring-2 ring-blue-500 ring-offset-2'
+                    : 'hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 hover:shadow-lg'
                   }
                   ${loadingPreset !== null && loadingPreset !== preset.id ? 'opacity-50' : ''}
                 `}
@@ -329,30 +346,36 @@ export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploade
                 <img
                   src={preset.thumbnail}
                   alt={preset.alt}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                 />
                 {loadingPreset === preset.id && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
                     <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
-                  <p className="text-xs text-white truncate">{preset.author}</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="absolute bottom-0 left-0 right-0 p-2">
+                    <p className="text-xs text-white truncate font-medium">{preset.author}</p>
+                  </div>
                 </div>
               </button>
             ))
           )}
         </div>
-        <p className="text-xs text-neutral-400 text-center mt-2">
-          Images from Lorem Picsum
+
+        <p className="text-xs text-neutral-300 text-center mt-3">
+          Lorem Picsum 제공
         </p>
       </div>
 
       {/* 에러 메시지 */}
       {error && (
-        <p className="text-sm text-red-600 text-center">
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {error}
-        </p>
+        </div>
       )}
     </div>
   );

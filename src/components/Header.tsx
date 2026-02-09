@@ -64,7 +64,7 @@ export function Header({
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-shadow">
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-white"
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-black"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >

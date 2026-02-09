@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #f5f5f5;
+  --background: #fafafa;
   --foreground: #171717;
 }
 
@@ -19,4 +19,122 @@ body {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* 부드러운 스크롤 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 글래스 카드 스타일 */
+.glass-card {
+  @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl shadow-black/5;
+}
+
+/* 그라데이션 텍스트 */
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent;
+}
+
+/* 그라데이션 버튼 */
+.btn-primary {
+  @apply px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
+         text-white rounded-xl transition-all duration-200 font-medium
+         shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98];
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-700 rounded-xl transition-all duration-200
+         border border-neutral-200 hover:border-neutral-300 shadow-sm hover:shadow;
+}
+
+/* 카드 호버 효과 */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1;
+}
+
+/* 페이지 배경 그라데이션 */
+.page-gradient {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 50%, #fafafa 100%);
+}
+
+/* 메시 그라데이션 배경 */
+.mesh-gradient {
+  background-color: #fafafa;
+  background-image:
+    radial-gradient(at 40% 20%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(147, 51, 234, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(59, 130, 246, 0.03) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(236, 72, 153, 0.03) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(147, 51, 234, 0.05) 0px, transparent 50%);
+}
+
+/* 로딩 스피너 개선 */
+.spinner {
+  @apply w-10 h-10 rounded-full border-4 border-neutral-200 border-t-blue-500 animate-spin;
+}
+
+/* 입력 필드 포커스 */
+input:focus, textarea:focus {
+  @apply outline-none ring-2 ring-blue-500/20 border-blue-500;
+}
+
+/* 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full hover:bg-neutral-400 transition-colors;
+}
+
+/* 페이드 인 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* 슬라이드 업 애니메이션 */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+/* 펄스 글로우 */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
 }
