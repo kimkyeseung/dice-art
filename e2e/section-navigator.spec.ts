@@ -59,7 +59,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 섹션 네비게이터 플로팅 버튼이 표시되는지 확인
@@ -74,7 +74,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 섹션 버튼 클릭
@@ -103,7 +103,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 현재 섹션이 A1인지 확인
@@ -131,7 +131,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 바텀 시트 열기
@@ -151,7 +151,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 바텀 시트 열기
@@ -171,7 +171,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 바텀 시트 열기
@@ -191,7 +191,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 현재 섹션이 A1인지 확인
@@ -225,7 +225,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 주사위 선택
@@ -270,7 +270,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-large-grid-work');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 주사위 선택
@@ -336,7 +336,7 @@ test.describe('Section Navigator', () => {
     await page.waitForURL(/\/work\//, { timeout: 15000 });
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 섹션 네비게이터가 표시되지 않는지 확인
@@ -382,7 +382,7 @@ test.describe('Section Navigator', () => {
     await page.goto('/work/test-partial-complete-grid');
 
     // 그리드 로딩 대기
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 플로팅 버튼에 완료 뱃지가 표시되는지 확인 (1개 섹션 완료)

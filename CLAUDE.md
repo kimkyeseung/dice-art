@@ -54,8 +54,9 @@ Key functions in `src/utils/storage.ts`:
 ### Key Components
 
 - **ImageUploader** (`src/components/ImageUploader.tsx`): Handles image upload via drag-and-drop or file selection. Also provides 4 Unsplash preset images for quick start
-- **Grid** (`src/components/Grid.tsx`): Main interactive canvas. Handles mouse/touch drag painting with Bresenham's line algorithm for smooth strokes. Left-click fills, right-click/long-press clears. Uses pointer events for unified mouse/touch handling
-- **Dice/NumberCell**: Render filled dice or target number respectively
+- **CanvasGrid** (`src/components/CanvasGrid.tsx`): Main interactive grid using HTML5 Canvas for performance. Handles mouse/touch drag painting with Bresenham's line algorithm. Left-click fills, right-click/long-press clears. Uses refs for latest state access to avoid stale closures
+- **Grid** (`src/components/Grid.tsx`): Legacy React component-based grid (kept for reference/rollback)
+- **Dice/NumberCell**: Render filled dice or target number respectively (used in DicePalette)
 - **DicePalette** (`src/components/DicePalette.tsx`): Bottom toolbar for selecting dice value (0-6) or eraser. Keyboard shortcuts: 0-6 for dice, E for eraser. Mobile layout uses 2 rows (4+4), desktop uses single row
 - **VirtualJoystick** (`src/components/VirtualJoystick.tsx`): Mobile-only joystick for panning the grid view. Uses pointer events and requestAnimationFrame for smooth continuous movement
 - **ZoomControls** (`src/components/ZoomControls.tsx`): Zoom in/out buttons with progress preview button. Shows current zoom percentage
@@ -70,6 +71,19 @@ For grids larger than 50x50 (2500+ cells), the app splits them into manageable s
 - **Section Navigation**: Floating button shows current section label with circular progress. Tap to open bottom sheet with full minimap
 - **Keyboard Shortcuts**: `Shift + Arrow keys` for quick section navigation
 - Grid component receives `rowOffset`/`colOffset` to map section coordinates to global grid
+
+### Canvas Rendering
+
+- **canvasRenderer** (`src/utils/canvasRenderer.ts`): Canvas 2D drawing utilities
+  - `drawDice()` - Draw single dice with scale/opacity animation support
+  - `drawNumberCell()` - Draw target number cell
+  - `renderGrid()` - Render entire grid
+  - `renderCellDirect()` - Immediate cell rendering (bypasses React state)
+  - `getCellFromPoint()` - Convert canvas coordinates to cell index
+- **dice-pop animation**: Implemented via requestAnimationFrame loop (150ms duration)
+  - Scale: 0.8 → 1.1 → 1.0
+  - Opacity: 0.5 → 1.0
+  - Animation state tracked in `animationsRef` Map
 
 ### State Management
 
@@ -120,7 +134,7 @@ PostgreSQL (Neon) with Prisma ORM. Single `Artwork` model stores gridState as JS
 ## Notes
 
 - UI language is Korean
-- The app uses a custom `dice-pop` animation for visual feedback when placing dice
+- The app uses a custom `dice-pop` animation for visual feedback when placing dice (Canvas-based, 150ms, scale 0.8→1.1→1.0)
 - Export renders dice at 60px cell size with 2px gap
 - Unsplash images are fetched directly without API key using public image URLs
 - DiceValue type is `0 | 1 | 2 | 3 | 4 | 5 | 6` (includes 0 for blank dice)

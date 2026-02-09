@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, use, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Grid,
+  CanvasGrid,
   DicePalette,
   ZoomControls,
   Switch,
@@ -627,7 +627,7 @@ export default function WorkPage({ params }: WorkPageProps) {
                   >
                     {/* 섹션 모드: 현재 섹션만 렌더링 */}
                     {sectionLayout && currentSectionGrid && currentSection ? (
-                      <Grid
+                      <CanvasGrid
                         gridState={currentSectionGrid}
                         cellSize={24}
                         selectedDice={selectedDice}
@@ -640,7 +640,7 @@ export default function WorkPage({ params }: WorkPageProps) {
                       />
                     ) : (
                       /* 일반 모드: 전체 그리드 렌더링 */
-                      <Grid
+                      <CanvasGrid
                         gridState={gridState}
                         cellSize={24}
                         selectedDice={selectedDice}

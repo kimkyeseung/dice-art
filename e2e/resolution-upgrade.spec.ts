@@ -13,7 +13,7 @@ test.describe('Resolution Upgrade', () => {
     await presetImage.click();
     await page.waitForURL(/\/work\//, { timeout: 15000 });
 
-    const grid = page.locator('[class*="inline-grid"]');
+    const grid = page.locator('[data-testid="canvas-grid"]');
     await expect(grid).toBeVisible({ timeout: 10000 });
   }
 

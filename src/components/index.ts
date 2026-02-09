@@ -4,6 +4,7 @@ export { DicePalette } from './DicePalette';
 export type { PaletteValue } from './DicePalette';
 export { ImageUploader } from './ImageUploader';
 export { Grid } from './Grid';
+export { CanvasGrid } from './CanvasGrid';
 export { ResumeWorkDialog } from './ResumeWorkDialog';
 export { ZoomControls } from './ZoomControls';
 export { Switch } from './Switch';

@@ -15,6 +15,7 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: ['**/mobile-touch.spec.ts'], // 모바일 전용 테스트 제외
     },
     {
       name: 'Mobile Chrome',
