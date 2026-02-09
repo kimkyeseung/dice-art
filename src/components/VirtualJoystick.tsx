@@ -132,6 +132,7 @@ export function VirtualJoystick({ onMove, size = 100 }: VirtualJoystickProps) {
     <div
       ref={containerRef}
       className="relative touch-none select-none"
+      data-testid="virtual-joystick"
       style={{
         width: size,
         height: size,
