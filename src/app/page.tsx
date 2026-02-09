@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ImageUploader, NicknameDialog } from '@/components';
+import { Header, ImageUploader, NicknameDialog } from '@/components';
 import { useUser } from '@/contexts/UserContext';
 import { processImage } from '@/utils/imageProcessor';
 import { useImageProcessorWorker } from '@/hooks/useImageProcessorWorker';
@@ -25,6 +25,9 @@ export default function Home() {
   // 데모 이미지 hover 상태
   const [isDemoHovered, setIsDemoHovered] = useState(false);
 
+  // 파일 선택 자동 트리거 (URL 파라미터로 전달)
+  const [autoUpload, setAutoUpload] = useState(false);
+
   // Web Worker 훅
   const { processImage: processImageWorker, isSupported: isWorkerSupported } = useImageProcessorWorker();
 
@@ -33,6 +36,13 @@ export default function Home() {
     migrateOldStorage();
     setWorkCount(listWorks().length);
     setIsInitialized(true);
+
+    // URL 파라미터 확인 및 처리
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upload') === 'true') {
+      setAutoUpload(true);
+      window.history.replaceState({}, '', '/');
+    }
   }, []);
 
   const handleImageLoad = useCallback(async (imageData: string, image: HTMLImageElement, dimension: number = 50) => {
@@ -82,61 +92,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-neutral-100 flex flex-col">
       {/* 헤더 */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-neutral-800">Dice Art</h1>
-                <p className="text-xs sm:text-sm text-neutral-500 hidden sm:block">
-                  이미지를 주사위 아트로 변환하세요
-                </p>
-              </div>
-              <Link
-                href="/gallery"
-                className="px-3 py-1.5 text-xs sm:text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-              >
-                갤러리
-              </Link>
-              <Link
-                href="/my-works"
-                className="px-3 py-1.5 text-xs sm:text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors flex items-center gap-1"
-              >
-                내 작업
-                {workCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                    {workCount}
-                  </span>
-                )}
-              </Link>
-              {user && (
-                <Link
-                  href="/my-artworks"
-                  className="px-3 py-1.5 text-xs sm:text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-                >
-                  공유한 작품
-                </Link>
-              )}
-              {/* 사용자 정보 */}
-              {user ? (
-                <button
-                  onClick={() => setShowNicknameDialog(true)}
-                  className="px-3 py-1.5 text-xs sm:text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
-                >
-                  {user.nickname}
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowNicknameDialog(true)}
-                  className="px-3 py-1.5 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  닉네임 설정
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header
+        workCount={workCount}
+        nickname={user?.nickname}
+        onNicknameClick={() => setShowNicknameDialog(true)}
+      />
 
       <main className="flex-1 w-full relative overflow-hidden">
         {/* 왼쪽 배경 이미지 - 데스크탑에서만 표시 */}
@@ -160,6 +120,7 @@ export default function Home() {
               fill
               className="object-cover object-center"
               priority
+              unoptimized
             />
           </div>
 
@@ -175,6 +136,7 @@ export default function Home() {
               fill
               className="object-cover object-center"
               priority
+              unoptimized
             />
           </div>
 
@@ -237,6 +199,7 @@ export default function Home() {
                       fill
                       className="object-cover"
                       priority
+                      unoptimized
                     />
                   </div>
 
@@ -252,6 +215,7 @@ export default function Home() {
                       fill
                       className="object-cover"
                       priority
+                      unoptimized
                     />
                   </div>
 
@@ -312,7 +276,7 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <ImageUploader onImageLoad={handleImageLoad} />
+                  <ImageUploader onImageLoad={handleImageLoad} autoTrigger={autoUpload} />
 
                   <div className="mt-6 space-y-2 text-center">
                     <p className="text-xs sm:text-sm text-neutral-500">

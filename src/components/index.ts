@@ -1,5 +1,6 @@
 export { DicePalette } from './DicePalette';
 export type { PaletteValue } from './DicePalette';
+export { Header } from './Header';
 export { ImageUploader } from './ImageUploader';
 export { CanvasGrid } from './CanvasGrid';
 export { ResumeWorkDialog } from './ResumeWorkDialog';

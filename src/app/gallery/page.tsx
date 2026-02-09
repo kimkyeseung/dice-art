@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ArtworkListItem, ArtworkListResponse, Artwork } from '@/types';
+import { Header } from '@/components/Header';
 import { ArtworkCard } from '@/components/ArtworkCard';
 import { ArtworkModal } from '@/components/ArtworkModal';
 
@@ -88,22 +89,16 @@ export default function GalleryPage() {
   return (
     <div className="min-h-screen bg-neutral-100">
       {/* 헤더 */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-800">Gallery</h1>
-            <p className="text-sm text-neutral-500">
-              {total > 0 ? `${total}개의 작품` : '아직 작품이 없습니다'}
-            </p>
-          </div>
+      <Header
+        rightContent={
           <Link
-            href="/"
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+            href="/?upload=true"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all text-sm font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
           >
-            작품 만들기
+            시작하기
           </Link>
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* 에러 */}
@@ -130,10 +125,10 @@ export default function GalleryPage() {
               첫 번째 작품을 만들어 갤러리에 공유해 보세요!
             </p>
             <Link
-              href="/"
-              className="inline-block px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              href="/?upload=true"
+              className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-500/25"
             >
-              작품 만들기
+              시작하기
             </Link>
           </div>
         )}

@@ -21,15 +21,28 @@ interface PresetImage {
 
 interface ImageUploaderProps {
   onImageLoad: (imageData: string, image: HTMLImageElement) => void;
+  /** 컴포넌트 마운트 시 자동으로 파일 선택 다이얼로그 열기 */
+  autoTrigger?: boolean;
 }
 
-export function ImageUploader({ onImageLoad }: ImageUploaderProps) {
+export function ImageUploader({ onImageLoad, autoTrigger = false }: ImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingPreset, setLoadingPreset] = useState<string | null>(null);
   const [randomPresets, setRandomPresets] = useState<PresetImage[]>([]);
   const [isLoadingPresets, setIsLoadingPresets] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // autoTrigger가 true면 자동으로 파일 선택 다이얼로그 열기
+  useEffect(() => {
+    if (autoTrigger && fileInputRef.current) {
+      // 약간의 딜레이를 줘서 페이지 렌더링 완료 후 실행
+      const timer = setTimeout(() => {
+        fileInputRef.current?.click();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoTrigger]);
 
   // Lorem Picsum API에서 랜덤 이미지 4개 가져오기
   useEffect(() => {

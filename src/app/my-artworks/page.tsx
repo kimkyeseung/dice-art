@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/contexts/UserContext';
 import { ArtworkListItem, ArtworkListResponse, Artwork } from '@/types';
-import { ArtworkCard, ArtworkModal, NicknameDialog, DeleteConfirmDialog } from '@/components';
+import { Header, ArtworkCard, ArtworkModal, NicknameDialog, DeleteConfirmDialog } from '@/components';
 
 export default function MyArtworksPage() {
   const { user, setNickname, isLoading: isUserLoading } = useUser();
@@ -153,24 +153,25 @@ export default function MyArtworksPage() {
   if (!user?.nickname) {
     return (
       <div className="min-h-screen bg-neutral-100">
-        <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-800">내 작품</h1>
-              <p className="text-sm text-neutral-500">내가 공유한 작품들</p>
-            </div>
+        <Header
+          onNicknameClick={() => setShowNicknameDialog(true)}
+          rightContent={
             <Link
               href="/"
               className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors text-sm"
             >
               홈으로
             </Link>
-          </div>
-        </header>
+          }
+        />
 
         <main className="max-w-6xl mx-auto px-4 py-8">
           <div className="text-center py-20">
-            <div className="text-6xl mb-4">👤</div>
+            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
             <h2 className="text-xl font-bold text-neutral-700 mb-2">
               닉네임을 설정해 주세요
             </h2>
@@ -179,7 +180,7 @@ export default function MyArtworksPage() {
             </p>
             <button
               onClick={() => setShowNicknameDialog(true)}
-              className="inline-block px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-500/25 font-medium"
             >
               닉네임 설정하기
             </button>
@@ -199,30 +200,18 @@ export default function MyArtworksPage() {
   return (
     <div className="min-h-screen bg-neutral-100">
       {/* 헤더 */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-800">내 작품</h1>
-            <p className="text-sm text-neutral-500">
-              {total > 0 ? `${total}개의 작품` : '아직 공유한 작품이 없습니다'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/gallery"
-              className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors text-sm"
-            >
-              갤러리
-            </Link>
-            <Link
-              href="/"
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
-            >
-              작품 만들기
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header
+        nickname={user?.nickname}
+        onNicknameClick={() => setShowNicknameDialog(true)}
+        rightContent={
+          <Link
+            href="/?upload=true"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all text-sm font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+          >
+            시작하기
+          </Link>
+        }
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* 에러 */}
@@ -249,10 +238,10 @@ export default function MyArtworksPage() {
               작품을 완성하고 갤러리에 공유해 보세요!
             </p>
             <Link
-              href="/"
-              className="inline-block px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              href="/?upload=true"
+              className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-500/25"
             >
-              작품 만들기
+              시작하기
             </Link>
           </div>
         )}

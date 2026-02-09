@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { WorkEntry } from '@/types';
 import { listWorks, deleteWork, migrateOldStorage } from '@/utils/storage';
-import { DeleteConfirmDialog } from '@/components';
+import { Header, DeleteConfirmDialog } from '@/components';
 
 export default function MyWorksPage() {
   const router = useRouter();
@@ -56,32 +56,17 @@ export default function MyWorksPage() {
   return (
     <div className="min-h-screen bg-neutral-100 flex flex-col">
       {/* 헤더 */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Link href="/" className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-neutral-800">Dice Art</h1>
-              </Link>
-              <Link
-                href="/gallery"
-                className="px-3 py-1.5 text-xs sm:text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-              >
-                갤러리
-              </Link>
-              <span className="px-3 py-1.5 text-xs sm:text-sm text-blue-600 font-medium">
-                내 작업
-              </span>
-            </div>
-            <Link
-              href="/"
-              className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-            >
-              새 작업 시작
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header
+        workCount={works.length}
+        rightContent={
+          <Link
+            href="/?upload=true"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all text-sm font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+          >
+            시작하기
+          </Link>
+        }
+      />
 
       <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 flex-1">
         <div className="mb-6">
@@ -101,10 +86,10 @@ export default function MyWorksPage() {
               새 이미지를 업로드하여 주사위 아트를 시작해보세요!
             </p>
             <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
+              href="/?upload=true"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all font-medium shadow-lg shadow-blue-500/25"
             >
-              새 작업 시작하기
+              시작하기
             </Link>
           </div>
         ) : (

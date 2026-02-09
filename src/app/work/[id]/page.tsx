@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, use, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Header,
   CanvasGrid,
   DicePalette,
   ZoomControls,
@@ -311,10 +312,10 @@ export default function WorkPage({ params }: WorkPageProps) {
       <div className="min-h-screen bg-neutral-100 flex flex-col items-center justify-center gap-4">
         <p className="text-neutral-600">작업을 찾을 수 없습니다.</p>
         <Link
-          href="/"
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+          href="/?upload=true"
+          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-500/25"
         >
-          새 작업 시작하기
+          시작하기
         </Link>
       </div>
     );
@@ -323,61 +324,31 @@ export default function WorkPage({ params }: WorkPageProps) {
   return (
     <div className="h-dvh overflow-hidden flex flex-col bg-neutral-100">
       {/* 헤더 */}
-      <header className="bg-white border-b border-neutral-200 flex-shrink-0 z-10">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-4">
-          <div className="flex items-center justify-between">
-            {/* 왼쪽: 로고 + 네비게이션 (데스크탑) */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Link href="/" className="flex-shrink-0">
-                <h1 className="text-lg sm:text-2xl font-bold text-neutral-800 whitespace-nowrap">
-                  Dice Art
-                </h1>
-              </Link>
-              {/* 자동 저장 상태 메시지 */}
-              {saveStatus && (
-                <span
-                  className={`text-xs transition-opacity ${
-                    saveStatus === "success" ? "text-green-600" : "text-red-500"
-                  }`}
-                >
-                  {saveStatus === "success" ? "저장되었어요" : "저장 실패"}
-                </span>
-              )}
-              {/* 데스크탑 네비게이션 */}
-              <nav className="hidden sm:flex items-center gap-2">
-                <Link
-                  href="/gallery"
-                  className="px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-                >
-                  갤러리
-                </Link>
-                <Link
-                  href="/my-works"
-                  className="px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-                >
-                  내 작업
-                </Link>
-                {user ? (
-                  <button
-                    onClick={() => setShowNicknameDialog(true)}
-                    className="px-3 py-1.5 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
-                  >
-                    {user.nickname}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowNicknameDialog(true)}
-                    className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    닉네임 설정
-                  </button>
-                )}
-              </nav>
-            </div>
-
-            {/* 오른쪽: 진행률 + 액션 버튼들 */}
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              {/* 진행률 */}
+      <Header
+        compact
+        nickname={user?.nickname}
+        onNicknameClick={() => setShowNicknameDialog(true)}
+        statusMessage={
+          saveStatus && (
+            <span
+              className={`text-xs px-2 py-1 rounded-full ${
+                saveStatus === "success"
+                  ? "text-green-700 bg-green-100"
+                  : "text-red-700 bg-red-100"
+              }`}
+            >
+              {saveStatus === "success" ? "저장됨" : "저장 실패"}
+            </span>
+          )
+        }
+        rightContent={
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* 진행률 */}
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 text-sm text-neutral-500">
+                <span>{gridState.width}×{gridState.height}</span>
+                <span className="text-neutral-300">|</span>
+              </div>
               <span
                 className={`text-sm sm:text-base font-bold ${
                   isComplete ? "text-green-600" : "text-blue-600"
@@ -385,90 +356,48 @@ export default function WorkPage({ params }: WorkPageProps) {
               >
                 {progress}%
               </span>
-              {/* 그리드 크기 - 데스크탑만 */}
-              <div className="text-sm text-neutral-500 hidden md:block">
-                {gridState.width} × {gridState.height} ={" "}
-                {gridState.width * gridState.height}칸
-              </div>
-              {/* 버튼들 */}
-              <div className="flex items-center gap-1 sm:gap-2">
-                {/* 다운로드 - 완료 시에만 활성화 */}
-                <button
-                  onClick={handleDownload}
-                  className={`p-2 sm:px-4 sm:py-2 text-sm rounded-lg transition-colors ${
-                    isComplete
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
-                  }`}
-                  disabled={!isComplete}
-                  title={
-                    isComplete
-                      ? "이미지 다운로드"
-                      : "모든 칸을 채워야 다운로드할 수 있습니다"
-                  }
-                >
-                  <span className="hidden sm:inline">다운로드</span>
-                  <svg
-                    className="w-5 h-5 sm:hidden"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                </button>
-                {/* 저장 */}
-                <button
-                  onClick={handleManualSave}
-                  className="p-2 sm:px-4 sm:py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                  title="저장"
-                >
-                  <span className="hidden sm:inline">저장</span>
-                  <svg
-                    className="w-5 h-5 sm:hidden"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8l-4-4H8zM16 20v-6H8v6M8 4v4h6"
-                    />
-                  </svg>
-                </button>
-                {/* 삭제 */}
-                <button
-                  onClick={handleDelete}
-                  className="p-2 sm:px-4 sm:py-2 text-sm bg-neutral-200 hover:bg-neutral-300 text-neutral-600 rounded-lg transition-colors"
-                  title="삭제"
-                >
-                  <span className="hidden sm:inline">삭제</span>
-                  <svg
-                    className="w-5 h-5 sm:hidden"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+            </div>
+            {/* 버튼들 */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              {/* 다운로드 */}
+              <button
+                onClick={handleDownload}
+                className={`p-2 sm:px-3 sm:py-1.5 text-sm rounded-lg transition-all ${
+                  isComplete
+                    ? "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/25"
+                    : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
+                }`}
+                disabled={!isComplete}
+                title={isComplete ? "다운로드" : "모든 칸을 채워야 합니다"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
+              {/* 저장 */}
+              <button
+                onClick={handleManualSave}
+                className="p-2 sm:px-3 sm:py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all shadow-lg shadow-blue-500/25"
+                title="저장"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8l-4-4H8zM16 20v-6H8v6M8 4v4h6" />
+                </svg>
+              </button>
+              {/* 삭제 */}
+              <button
+                onClick={handleDelete}
+                className="p-2 sm:px-3 sm:py-1.5 text-sm bg-neutral-200 hover:bg-red-100 text-neutral-500 hover:text-red-600 rounded-lg transition-all"
+                title="삭제"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
             </div>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-8 flex-1 min-h-0 overflow-hidden flex flex-col w-full">
