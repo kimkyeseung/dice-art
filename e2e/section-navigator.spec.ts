@@ -229,41 +229,97 @@ test.describe('Section Navigator', () => {
     await expect(grid).toBeVisible({ timeout: 10000 });
 
     // 주사위 선택
-    const diceButton = page.locator('[data-testid="dice-button-3"]').first();
+    const diceButton = page.locator('[data-testid="dice-button-1"]').first();
     await expect(diceButton).toBeVisible({ timeout: 5000 });
     await diceButton.click();
 
-    // 현재 섹션(A1)에서 셀 채우기
+    // 현재 섹션(A1)에서 여러 셀 채우기 (드래그로)
     const gridBox = await grid.boundingBox();
     expect(gridBox).not.toBeNull();
 
     if (gridBox) {
-      await page.touchscreen.tap(gridBox.x + 50, gridBox.y + 50);
-      await page.waitForTimeout(300);
+      const client = await page.context().newCDPSession(page);
+
+      // 드래그로 여러 셀 채우기
+      const startX = gridBox.x + 30;
+      const startY = gridBox.y + 30;
+      const endX = gridBox.x + 200;
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: startX, y: startY, id: 0 }],
+      });
+
+      for (let i = 1; i <= 10; i++) {
+        const x = startX + ((endX - startX) * i) / 10;
+        await client.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x, y: startY, id: 0 }],
+        });
+        await page.waitForTimeout(30);
+      }
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
     }
 
-    // 채워진 주사위 확인
-    const filledDice = grid.locator('[class*="animate-dice-pop"]');
-    await expect(filledDice.first()).toBeVisible({ timeout: 3000 });
+    await page.waitForTimeout(500);
 
-    // B2 섹션으로 이동
+    // A1 섹션의 진행률 확인 (바텀 시트에서)
     const sectionButton = page.getByRole('button', { name: /섹션.*클릭하여 섹션 선택/ });
     await sectionButton.click();
+    await expect(page.locator('text=섹션 선택')).toBeVisible({ timeout: 3000 });
 
+    const a1Progress = page.locator('button.aspect-square:has-text("A1")');
+    const a1Text = await a1Progress.textContent();
+    expect(a1Text).not.toContain('0%');
+
+    // B2 섹션 선택
     const b2Button = page.getByRole('button', { name: /B2.*%/ });
     await b2Button.click();
 
-    // B2 섹션에서도 셀 채우기
     await page.waitForTimeout(500);
+
+    // B2 섹션에서도 셀 채우기 (드래그로)
     const newGridBox = await grid.boundingBox();
 
     if (newGridBox) {
-      await page.touchscreen.tap(newGridBox.x + 50, newGridBox.y + 50);
-      await page.waitForTimeout(300);
+      const client = await page.context().newCDPSession(page);
+
+      const startX = newGridBox.x + 30;
+      const startY = newGridBox.y + 30;
+      const endX = newGridBox.x + 200;
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: startX, y: startY, id: 0 }],
+      });
+
+      for (let i = 1; i <= 10; i++) {
+        const x = startX + ((endX - startX) * i) / 10;
+        await client.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x, y: startY, id: 0 }],
+        });
+        await page.waitForTimeout(30);
+      }
+
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
     }
 
-    // B2에서도 주사위가 채워졌는지 확인
-    await expect(filledDice.first()).toBeVisible({ timeout: 3000 });
+    await page.waitForTimeout(500);
+
+    // B2에서도 주사위가 채워졌는지 확인 (바텀 시트에서 B2 진행률 확인)
+    const sectionButtonAfter = page.getByRole('button', { name: /섹션.*클릭하여 섹션 선택/ });
+    await sectionButtonAfter.click();
+    const b2Progress = page.locator('button.aspect-square:has-text("B2")');
+    const b2Text = await b2Progress.textContent();
+    expect(b2Text).not.toContain('0%');
   });
 
   test('should show correct progress for each section', async ({ page }) => {

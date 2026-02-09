@@ -15,7 +15,7 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['**/mobile-touch.spec.ts'], // 모바일 전용 테스트 제외
+      testIgnore: ['**/mobile-touch.spec.ts', '**/section-navigator.spec.ts'], // 모바일 전용 테스트 제외
     },
     {
       name: 'Mobile Chrome',
@@ -24,6 +24,7 @@ export default defineConfig({
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
+      testIgnore: ['**/mobile-touch.spec.ts', '**/section-navigator.spec.ts'], // CDP 미지원
     },
   ],
   webServer: {
