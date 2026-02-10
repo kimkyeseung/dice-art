@@ -75,15 +75,25 @@ export function ArtworkModal({ artwork, onClose, onLike }: ArtworkModalProps) {
         {/* 이미지 */}
         <div className="flex-1 overflow-auto bg-neutral-100 flex items-center justify-center p-4">
           <div className="relative max-w-full max-h-full">
-            <Image
-              src={artwork.imageUrl}
-              alt={artwork.title}
-              width={artwork.width * 30}
-              height={artwork.height * 30}
-              className="object-contain max-h-[40vh]"
-              style={{ width: 'auto', height: 'auto' }}
-              priority
-            />
+            <button
+              onClick={(e) => {
+                e.currentTarget.blur();
+                window.open(artwork.imageUrl, '_blank');
+              }}
+              className="cursor-zoom-in transition-transform hover:scale-[1.02] focus:outline-none active:cursor-zoom-in"
+              title="클릭하여 원본 이미지 보기"
+            >
+              <Image
+                src={artwork.previewUrl}
+                alt={artwork.title}
+                width={Math.min(artwork.width * 10, 900)}
+                height={Math.min(artwork.height * 10, 900)}
+                className="object-contain max-h-[40vh]"
+                style={{ width: 'auto', height: 'auto' }}
+                priority
+                unoptimized
+              />
+            </button>
           </div>
         </div>
 

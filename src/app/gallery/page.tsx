@@ -24,7 +24,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         }
       />
 
-      <main className="max-w-6xl mx-auto px-4 py-8 flex-1">
+      <main className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-8 flex-1">
         {/* 페이지 제목 */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-800">갤러리</h1>
@@ -92,7 +92,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 
       {/* 푸터 */}
       <footer className="border-t border-neutral-200/50 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-neutral-400">
+        <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-6 text-center text-sm text-neutral-400">
           &copy; {new Date().getFullYear()} kimkyeseung
         </div>
       </footer>

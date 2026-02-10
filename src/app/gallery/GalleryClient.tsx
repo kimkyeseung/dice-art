@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ArtworkListItem, Artwork } from '@/types';
 import { ArtworkCard } from '@/components/ArtworkCard';
 import { ArtworkModal } from '@/components/ArtworkModal';
@@ -25,6 +25,18 @@ export function GalleryClient({
   // 모달 상태
   const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+
+  // 모달 열릴 때 스크롤 잠금
+  useEffect(() => {
+    if (selectedArtwork) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedArtwork]);
 
   // 더 불러오기
   const loadMore = useCallback(async () => {

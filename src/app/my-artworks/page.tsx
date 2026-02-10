@@ -19,6 +19,18 @@ export default function MyArtworksPage() {
   const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
+  // 모달 열릴 때 스크롤 잠금
+  useEffect(() => {
+    if (selectedArtwork) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedArtwork]);
+
   // 삭제 상태
   const [artworkToDelete, setArtworkToDelete] = useState<ArtworkListItem | null>(null);
 
@@ -160,7 +172,7 @@ export default function MyArtworksPage() {
           }
         />
 
-        <main className="max-w-6xl mx-auto px-4 py-8 flex-1 flex items-center justify-center">
+        <main className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-8 flex-1 flex items-center justify-center">
           <div className="text-center py-10 animate-fade-in">
             <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center">
               <svg className="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +219,7 @@ export default function MyArtworksPage() {
         }
       />
 
-      <main className="max-w-6xl mx-auto px-4 py-8 flex-1">
+      <main className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-8 flex-1">
         {/* 페이지 제목 */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-800">공유한 작품</h1>
@@ -352,7 +364,7 @@ export default function MyArtworksPage() {
 
       {/* 푸터 */}
       <footer className="border-t border-neutral-200/50 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-neutral-400">
+        <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-6 text-center text-sm text-neutral-400">
           &copy; {new Date().getFullYear()} kimkyeseung
         </div>
       </footer>
