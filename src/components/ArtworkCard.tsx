@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { ArtworkListItem } from '@/types';
 
 interface ArtworkCardProps {
@@ -21,11 +22,12 @@ export function ArtworkCard({ artwork, onClick }: ArtworkCardProps) {
     >
       {/* 썸네일 */}
       <div className="relative aspect-square bg-neutral-100 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={artwork.thumbnailData}
+        <Image
+          src={artwork.thumbnailUrl}
           alt={artwork.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          className="object-cover group-hover:scale-110 transition-transform duration-500"
         />
 
         {/* 오버레이 */}

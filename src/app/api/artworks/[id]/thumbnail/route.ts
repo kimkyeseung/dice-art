@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtworkThumbnail } from '@/lib/artworkStore';
+import { getArtworkThumbnail, getArtworkThumbnailUrl } from '@/lib/artworkStore';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -12,8 +12,16 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const imageData = await getArtworkThumbnail(id);
 
+    // 새로운 URL 방식 확인
+    const thumbnailUrl = await getArtworkThumbnailUrl(id);
+    if (thumbnailUrl) {
+      // Supabase Storage URL로 리다이렉트
+      return NextResponse.redirect(thumbnailUrl, { status: 302 });
+    }
+
+    // 레거시 Base64 방식
+    const imageData = await getArtworkThumbnail(id);
     if (!imageData) {
       return new NextResponse('Thumbnail not found', { status: 404 });
     }

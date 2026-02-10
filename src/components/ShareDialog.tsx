@@ -5,6 +5,7 @@ import { GridState } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { NicknameDialog } from './NicknameDialog';
 import { generateResizedImages } from '@/utils/imageResize';
+import { uploadArtworkImages, isStorageConfigured } from '@/utils/supabaseStorage';
 
 interface ShareDialogProps {
   gridState: GridState;
@@ -18,6 +19,7 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [showNicknameDialog, setShowNicknameDialog] = useState(!user);
 
   const handleNicknameSubmit = (nickname: string) => {
@@ -38,13 +40,28 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
       return;
     }
 
+    if (!isStorageConfigured()) {
+      setError('이미지 스토리지가 설정되지 않았습니다. 관리자에게 문의하세요.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // 3종 이미지 생성 (thumbnail, preview, original)
+      // 1. 임시 ID 생성 (cuid 형식)
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // 2. 3종 이미지 생성 (thumbnail, preview, original)
+      setUploadProgress('이미지 처리 중...');
       const resizedImages = await generateResizedImages(imageData);
 
+      // 3. Supabase Storage에 업로드
+      setUploadProgress('업로드 중...');
+      const uploadedUrls = await uploadArtworkImages(tempId, resizedImages);
+
+      // 4. DB에 저장
+      setUploadProgress('저장 중...');
       const response = await fetch('/api/artworks', {
         method: 'POST',
         headers: {
@@ -54,9 +71,9 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
           title: title.trim(),
           authorName: user.nickname,
           gridState,
-          imageData: resizedImages.original,
-          thumbnailData: resizedImages.thumbnail,
-          previewData: resizedImages.preview,
+          imageUrl: uploadedUrls.originalUrl,
+          thumbnailUrl: uploadedUrls.thumbnailUrl,
+          previewUrl: uploadedUrls.previewUrl,
         }),
       });
 
@@ -70,6 +87,7 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -163,7 +181,7 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  업로드 중...
+                  {uploadProgress || '업로드 중...'}
                 </>
               ) : (
                 '공유하기'

@@ -1,28 +1,47 @@
-import { Artwork, ArtworkListItem, CreateArtworkRequest, GridState, Comment, CreateCommentRequest } from '@/types';
+import { Artwork, ArtworkListItem, GridState, Comment, CreateCommentRequest } from '@/types';
 import prisma from './prisma';
 
-// Prisma 모델을 API 타입으로 변환
-function toArtwork(dbArtwork: {
+// 새로운 작품 생성 요청 타입 (URL 기반)
+export interface CreateArtworkWithUrlsRequest {
+  title: string;
+  authorName: string;
+  gridState: GridState;
+  imageUrl: string;
+  thumbnailUrl: string;
+  previewUrl: string;
+}
+
+// DB 모델 타입
+interface DbArtwork {
   id: string;
   title: string;
   authorName: string;
   gridState: string;
-  imageData: string;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  previewUrl: string | null;
+  imageData: string | null;
   thumbnailData: string | null;
   previewData: string | null;
   width: number;
   height: number;
   likes: number;
   createdAt: Date;
-}): Artwork {
+}
+
+// Prisma 모델을 API 타입으로 변환
+function toArtwork(dbArtwork: DbArtwork): Artwork {
+  // 새 URL 필드 우선, 없으면 레거시 API 엔드포인트 사용
+  const hasUrls = dbArtwork.imageUrl && dbArtwork.thumbnailUrl && dbArtwork.previewUrl;
+
   return {
     id: dbArtwork.id,
     title: dbArtwork.title,
     authorName: dbArtwork.authorName,
     gridState: JSON.parse(dbArtwork.gridState) as GridState,
-    imageUrl: `/api/artworks/${dbArtwork.id}/image`,
-    thumbnailUrl: `/api/artworks/${dbArtwork.id}/thumbnail`,
-    previewUrl: `/api/artworks/${dbArtwork.id}/preview`,
+    imageUrl: hasUrls ? dbArtwork.imageUrl! : `/api/artworks/${dbArtwork.id}/image`,
+    thumbnailUrl: hasUrls ? dbArtwork.thumbnailUrl! : `/api/artworks/${dbArtwork.id}/thumbnail`,
+    previewUrl: hasUrls ? dbArtwork.previewUrl! : `/api/artworks/${dbArtwork.id}/preview`,
     width: dbArtwork.width,
     height: dbArtwork.height,
     likes: dbArtwork.likes,
@@ -34,18 +53,21 @@ function toArtworkListItem(dbArtwork: {
   id: string;
   title: string;
   authorName: string;
+  thumbnailUrl: string | null;
   thumbnailData: string | null;
-  imageData: string;
   width: number;
   height: number;
   likes: number;
   createdAt: Date;
 }): ArtworkListItem {
+  // 새 URL 필드 우선, 없으면 레거시 API 엔드포인트 사용
+  const thumbnailUrl = dbArtwork.thumbnailUrl || `/api/artworks/${dbArtwork.id}/thumbnail`;
+
   return {
     id: dbArtwork.id,
     title: dbArtwork.title,
     authorName: dbArtwork.authorName,
-    thumbnailData: dbArtwork.thumbnailData || dbArtwork.imageData, // 하위 호환
+    thumbnailUrl,
     width: dbArtwork.width,
     height: dbArtwork.height,
     likes: dbArtwork.likes,
@@ -53,22 +75,22 @@ function toArtworkListItem(dbArtwork: {
   };
 }
 
-// 작품 생성
-export async function createArtwork(request: CreateArtworkRequest): Promise<Artwork> {
+// 작품 생성 (URL 기반 - 새로운 방식)
+export async function createArtwork(request: CreateArtworkWithUrlsRequest): Promise<Artwork> {
   const artwork = await prisma.artwork.create({
     data: {
       title: request.title,
       authorName: request.authorName,
       gridState: JSON.stringify(request.gridState),
-      imageData: request.imageData,
-      thumbnailData: request.thumbnailData,
-      previewData: request.previewData,
+      imageUrl: request.imageUrl,
+      thumbnailUrl: request.thumbnailUrl,
+      previewUrl: request.previewUrl,
       width: request.gridState.width,
       height: request.gridState.height,
     },
   });
 
-  return toArtwork(artwork);
+  return toArtwork(artwork as DbArtwork);
 }
 
 // 작품 목록 조회
@@ -87,8 +109,8 @@ export async function getArtworks(
         id: true,
         title: true,
         authorName: true,
-        thumbnailData: true,
-        imageData: true, // thumbnailData 없는 경우 대비 (하위 호환)
+        thumbnailUrl: true,
+        thumbnailData: true, // 레거시 지원
         width: true,
         height: true,
         likes: true,
@@ -116,7 +138,7 @@ export async function getArtwork(id: string): Promise<Artwork | null> {
 
   if (!artwork) return null;
 
-  return toArtwork(artwork);
+  return toArtwork(artwork as DbArtwork);
 }
 
 // 작품 삭제
@@ -138,43 +160,78 @@ export async function likeArtwork(id: string): Promise<Artwork | null> {
       where: { id },
       data: { likes: { increment: 1 } },
     });
-    return toArtwork(artwork);
+    return toArtwork(artwork as DbArtwork);
   } catch {
     return null;
   }
 }
 
+// ===== 레거시 이미지 데이터 조회 (하위 호환용) =====
+
 // 원본 이미지 데이터 조회 (다운로드용)
 export async function getArtworkImage(id: string): Promise<string | null> {
   const artwork = await prisma.artwork.findUnique({
     where: { id },
-    select: { imageData: true },
+    select: { imageData: true, imageUrl: true },
   });
 
+  // URL이 있으면 null 반환 (리다이렉트 처리 필요)
+  if (artwork?.imageUrl) return null;
   return artwork?.imageData || null;
+}
+
+// 원본 이미지 URL 조회
+export async function getArtworkImageUrl(id: string): Promise<string | null> {
+  const artwork = await prisma.artwork.findUnique({
+    where: { id },
+    select: { imageUrl: true },
+  });
+  return artwork?.imageUrl || null;
 }
 
 // 썸네일 이미지 데이터 조회 (갤러리 목록용)
 export async function getArtworkThumbnail(id: string): Promise<string | null> {
   const artwork = await prisma.artwork.findUnique({
     where: { id },
-    select: { thumbnailData: true, imageData: true },
+    select: { thumbnailData: true, imageData: true, thumbnailUrl: true },
   });
 
-  // thumbnailData가 없으면 원본 반환 (하위 호환)
+  // URL이 있으면 null 반환 (리다이렉트 처리 필요)
+  if (artwork?.thumbnailUrl) return null;
   return artwork?.thumbnailData || artwork?.imageData || null;
+}
+
+// 썸네일 URL 조회
+export async function getArtworkThumbnailUrl(id: string): Promise<string | null> {
+  const artwork = await prisma.artwork.findUnique({
+    where: { id },
+    select: { thumbnailUrl: true },
+  });
+  return artwork?.thumbnailUrl || null;
 }
 
 // 미리보기 이미지 데이터 조회 (상세 페이지용)
 export async function getArtworkPreview(id: string): Promise<string | null> {
   const artwork = await prisma.artwork.findUnique({
     where: { id },
-    select: { previewData: true, imageData: true },
+    select: { previewData: true, imageData: true, previewUrl: true },
   });
 
-  // previewData가 없으면 원본 반환 (하위 호환)
+  // URL이 있으면 null 반환 (리다이렉트 처리 필요)
+  if (artwork?.previewUrl) return null;
   return artwork?.previewData || artwork?.imageData || null;
 }
+
+// 미리보기 URL 조회
+export async function getArtworkPreviewUrl(id: string): Promise<string | null> {
+  const artwork = await prisma.artwork.findUnique({
+    where: { id },
+    select: { previewUrl: true },
+  });
+  return artwork?.previewUrl || null;
+}
+
+// ===== 유효성 검사 =====
 
 // GridState 유효성 검사
 export function validateGridState(gridState: unknown): gridState is GridState {
@@ -199,17 +256,17 @@ export function validateGridState(gridState: unknown): gridState is GridState {
   return true;
 }
 
-// CreateArtworkRequest 유효성 검사
-export function validateCreateArtworkRequest(body: unknown): body is CreateArtworkRequest {
+// CreateArtworkWithUrlsRequest 유효성 검사
+export function validateCreateArtworkRequest(body: unknown): body is CreateArtworkWithUrlsRequest {
   if (!body || typeof body !== 'object') return false;
 
   const req = body as Record<string, unknown>;
 
   if (typeof req.title !== 'string' || req.title.trim().length === 0) return false;
   if (typeof req.authorName !== 'string' || req.authorName.trim().length === 0) return false;
-  if (typeof req.imageData !== 'string' || !req.imageData.startsWith('data:image/')) return false;
-  if (typeof req.thumbnailData !== 'string' || !req.thumbnailData.startsWith('data:image/')) return false;
-  if (typeof req.previewData !== 'string' || !req.previewData.startsWith('data:image/')) return false;
+  if (typeof req.imageUrl !== 'string' || !req.imageUrl.startsWith('http')) return false;
+  if (typeof req.thumbnailUrl !== 'string' || !req.thumbnailUrl.startsWith('http')) return false;
+  if (typeof req.previewUrl !== 'string' || !req.previewUrl.startsWith('http')) return false;
   if (!validateGridState(req.gridState)) return false;
 
   return true;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtworkImage } from '@/lib/artworkStore';
+import { getArtworkImage, getArtworkImageUrl } from '@/lib/artworkStore';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -12,8 +12,16 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const imageData = await getArtworkImage(id);
 
+    // 새로운 URL 방식 확인
+    const imageUrl = await getArtworkImageUrl(id);
+    if (imageUrl) {
+      // Supabase Storage URL로 리다이렉트
+      return NextResponse.redirect(imageUrl, { status: 302 });
+    }
+
+    // 레거시 Base64 방식
+    const imageData = await getArtworkImage(id);
     if (!imageData) {
       return new NextResponse('Image not found', { status: 404 });
     }

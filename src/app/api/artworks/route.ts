@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     if (!validateCreateArtworkRequest(body)) {
       const error: ApiErrorResponse = {
         error: 'VALIDATION_ERROR',
-        message: '입력 데이터가 올바르지 않습니다. title, authorName, gridState, imageData가 필요합니다.',
+        message: '입력 데이터가 올바르지 않습니다. title, authorName, gridState, imageUrl, thumbnailUrl, previewUrl이 필요합니다.',
       };
       return NextResponse.json(error, { status: 400 });
     }
@@ -34,15 +34,6 @@ export async function POST(request: NextRequest) {
       const error: ApiErrorResponse = {
         error: 'VALIDATION_ERROR',
         message: '작성자 이름은 50자를 초과할 수 없습니다.',
-      };
-      return NextResponse.json(error, { status: 400 });
-    }
-
-    // 이미지 크기 검사 (약 10MB)
-    if (body.imageData.length > 10 * 1024 * 1024) {
-      const error: ApiErrorResponse = {
-        error: 'VALIDATION_ERROR',
-        message: '이미지 크기가 너무 큽니다. (최대 10MB)',
       };
       return NextResponse.json(error, { status: 400 });
     }
@@ -78,7 +69,12 @@ export async function GET(request: NextRequest) {
       hasMore: result.hasMore,
     };
 
-    return NextResponse.json(response);
+    // 캐싱 헤더 추가 (1분 캐시, 5분 stale-while-revalidate)
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 's-maxage=60, stale-while-revalidate=300',
+      },
+    });
   } catch (error) {
     console.error('Failed to get artworks:', error);
     const errorResponse: ApiErrorResponse = {

@@ -54,21 +54,21 @@ export interface ArtworkListItem {
   id: string;
   title: string;
   authorName: string;
-  thumbnailData: string; // base64 encoded PNG (~150px)
+  thumbnailUrl: string; // Supabase Storage URL (~150px)
   width: number;
   height: number;
   createdAt: string;
   likes: number;
 }
 
-// 작품 업로드 요청
+// 작품 업로드 요청 (URL 기반 - Supabase Storage)
 export interface CreateArtworkRequest {
   title: string;
   authorName: string;
   gridState: GridState;
-  imageData: string; // base64 encoded PNG (원본, 다운로드용)
-  thumbnailData: string; // base64 encoded PNG (~150px, 갤러리 목록용)
-  previewData: string; // base64 encoded PNG (~600px, 상세 페이지용)
+  imageUrl: string; // Supabase Storage URL (원본, 다운로드용)
+  thumbnailUrl: string; // Supabase Storage URL (~150px, 갤러리 목록용)
+  previewUrl: string; // Supabase Storage URL (~900px, 상세 페이지용)
 }
 
 // 작품 목록 응답

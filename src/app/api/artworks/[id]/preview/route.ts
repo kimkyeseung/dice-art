@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtworkPreview } from '@/lib/artworkStore';
+import { getArtworkPreview, getArtworkPreviewUrl } from '@/lib/artworkStore';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-// GET /api/artworks/[id]/preview - 작품 미리보기 이미지 반환 (~600px, 상세 페이지용)
+// GET /api/artworks/[id]/preview - 작품 미리보기 이미지 반환 (~900px, 상세 페이지용)
 export async function GET(
   request: NextRequest,
   context: RouteContext
 ) {
   try {
     const { id } = await context.params;
-    const imageData = await getArtworkPreview(id);
 
+    // 새로운 URL 방식 확인
+    const previewUrl = await getArtworkPreviewUrl(id);
+    if (previewUrl) {
+      // Supabase Storage URL로 리다이렉트
+      return NextResponse.redirect(previewUrl, { status: 302 });
+    }
+
+    // 레거시 Base64 방식
+    const imageData = await getArtworkPreview(id);
     if (!imageData) {
       return new NextResponse('Preview not found', { status: 404 });
     }
