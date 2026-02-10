@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { GridState } from '@/types';
 import { useUser } from '@/contexts/UserContext';
-import { NicknameDialog } from './NicknameDialog';
 import { generateResizedImages } from '@/utils/imageResize';
 import { uploadArtworkImages, isStorageConfigured } from '@/utils/supabaseStorage';
+import { getSession } from '@/lib/supabase';
 
 interface ShareDialogProps {
   gridState: GridState;
@@ -15,28 +17,18 @@ interface ShareDialogProps {
 }
 
 export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareDialogProps) {
-  const { user, setNickname } = useUser();
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: isUserLoading } = useUser();
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
-  const [showNicknameDialog, setShowNicknameDialog] = useState(!user);
-
-  const handleNicknameSubmit = (nickname: string) => {
-    setNickname(nickname);
-    setShowNicknameDialog(false);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) {
       setError('제목을 입력해 주세요.');
-      return;
-    }
-
-    if (!user?.nickname) {
-      setShowNicknameDialog(true);
       return;
     }
 
@@ -49,6 +41,14 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
     setError(null);
 
     try {
+      // 세션 토큰 가져오기
+      const { session, error: sessionError } = await getSession();
+
+      if (sessionError || !session) {
+        setError('세션이 만료되었습니다. 다시 로그인해주세요.');
+        return;
+      }
+
       // 1. 임시 ID 생성 (cuid 형식)
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -60,16 +60,17 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
       setUploadProgress('업로드 중...');
       const uploadedUrls = await uploadArtworkImages(tempId, resizedImages);
 
-      // 4. DB에 저장
+      // 4. DB에 저장 (인증 토큰 포함)
       setUploadProgress('저장 중...');
       const response = await fetch('/api/artworks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           title: title.trim(),
-          authorName: user.nickname,
+          authorName: user?.nickname || 'Anonymous',
           gridState,
           imageUrl: uploadedUrls.originalUrl,
           thumbnailUrl: uploadedUrls.thumbnailUrl,
@@ -91,16 +92,58 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
     }
   };
 
-  // 닉네임 설정 다이얼로그
-  if (showNicknameDialog) {
+  // 로딩 중
+  if (isUserLoading) {
     return (
-      <NicknameDialog
-        onSubmit={handleNicknameSubmit}
-        onClose={onClose}
-        title="닉네임 설정"
-        description="갤러리에 공유하려면 닉네임이 필요합니다."
-        submitLabel="설정하고 계속"
-      />
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // 로그인 필요 화면
+  if (!isAuthenticated) {
+    return (
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-neutral-800 mb-2">
+              로그인이 필요합니다
+            </h2>
+            <p className="text-neutral-600 mb-6">
+              갤러리에 작품을 공유하려면 로그인이 필요합니다.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-3 text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors font-medium"
+              >
+                취소
+              </button>
+              <Link
+                href={`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                className="flex-1 px-4 py-3 text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors font-medium text-center"
+              >
+                로그인
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -122,18 +165,14 @@ export function ShareDialog({ gridState, imageData, onClose, onSuccess }: ShareD
 
         <form onSubmit={handleSubmit}>
           {/* 작성자 정보 */}
-          <div className="mb-4 p-3 bg-neutral-50 rounded-lg flex items-center justify-between">
+          <div className="mb-4 p-3 bg-neutral-50 rounded-lg flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
+              {user?.nickname.charAt(0).toUpperCase()}
+            </div>
             <div>
               <span className="text-sm text-neutral-500">작성자</span>
               <p className="font-medium text-neutral-800">{user?.nickname}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowNicknameDialog(true)}
-              className="text-sm text-blue-500 hover:text-blue-600"
-            >
-              변경
-            </button>
           </div>
 
           {/* 제목 */}

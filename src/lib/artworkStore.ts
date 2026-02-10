@@ -9,6 +9,7 @@ export interface CreateArtworkWithUrlsRequest {
   imageUrl: string;
   thumbnailUrl: string;
   previewUrl: string;
+  userId?: string;  // 로그인한 사용자의 경우 userId 포함
 }
 
 // DB 모델 타입
@@ -87,6 +88,7 @@ export async function createArtwork(request: CreateArtworkWithUrlsRequest): Prom
       previewUrl: request.previewUrl,
       width: request.gridState.width,
       height: request.gridState.height,
+      userId: request.userId,  // 로그인한 사용자 연결
     },
   });
 
@@ -301,6 +303,7 @@ export async function createComment(
       content: request.content,
       authorName: request.authorName,
       artworkId,
+      userId: request.userId,  // 로그인한 사용자 연결
     },
   });
 

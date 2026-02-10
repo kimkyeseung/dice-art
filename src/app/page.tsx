@@ -4,8 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Header, ImageUploader, NicknameDialog } from '@/components';
-import { useUser } from '@/contexts/UserContext';
+import { Header, ImageUploader } from '@/components';
 import { processImage } from '@/utils/imageProcessor';
 import { useImageProcessorWorker } from '@/hooks/useImageProcessorWorker';
 import { generateWorkId, saveWork, migrateOldStorage, listWorks } from '@/utils/storage';
@@ -14,10 +13,6 @@ export default function Home() {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-
-  // 사용자 상태
-  const { user, setNickname } = useUser();
-  const [showNicknameDialog, setShowNicknameDialog] = useState(false);
 
   // 진행 중인 작업 수
   const [workCount, setWorkCount] = useState(0);
@@ -92,11 +87,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-neutral-100 flex flex-col">
       {/* 헤더 */}
-      <Header
-        workCount={workCount}
-        nickname={user?.nickname}
-        onNicknameClick={() => setShowNicknameDialog(true)}
-      />
+      <Header workCount={workCount} />
 
       <main className="flex-1 w-full relative overflow-hidden">
         {/* 왼쪽 배경 이미지 - 데스크탑에서만 표시 */}
@@ -335,20 +326,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* 닉네임 설정 다이얼로그 */}
-      {showNicknameDialog && (
-        <NicknameDialog
-          onSubmit={(nickname) => {
-            setNickname(nickname);
-            setShowNicknameDialog(false);
-          }}
-          onClose={() => setShowNicknameDialog(false)}
-          initialValue={user?.nickname || ''}
-          title={user ? '닉네임 변경' : '닉네임 설정'}
-          description={user ? '새 닉네임을 입력해 주세요.' : '갤러리에서 사용할 닉네임을 입력해 주세요.'}
-          submitLabel={user ? '변경' : '확인'}
-        />
-      )}
     </div>
   );
 }

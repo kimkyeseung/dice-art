@@ -10,13 +10,11 @@ import {
   ZoomControls,
   Switch,
   ShareDialog,
-  NicknameDialog,
   ProgressPreviewDialog,
   SectionNavigator,
   DebugControls,
 } from "@/components";
 import type { PaletteValue } from "@/components";
-import { useUser } from "@/contexts/UserContext";
 import { GridState, DiceValue, SectionLayout } from "@/types";
 import { processImage, calculateProgress } from "@/utils/imageProcessor";
 import { loadWork, saveWork, deleteWork } from "@/utils/storage";
@@ -62,10 +60,6 @@ export default function WorkPage({ params }: WorkPageProps) {
   // 섹션 관련 상태
   const [currentSectionRow, setCurrentSectionRow] = useState(0);
   const [currentSectionCol, setCurrentSectionCol] = useState(0);
-
-  // 사용자 상태
-  const { user, setNickname } = useUser();
-  const [showNicknameDialog, setShowNicknameDialog] = useState(false);
 
   // 자동 저장 훅
   const { save, saveStatus } = useAutoSave({
@@ -326,8 +320,6 @@ export default function WorkPage({ params }: WorkPageProps) {
       {/* 헤더 */}
       <Header
         compact
-        nickname={user?.nickname}
-        onNicknameClick={() => setShowNicknameDialog(true)}
         statusMessage={
           saveStatus && (
             <span
@@ -644,25 +636,6 @@ export default function WorkPage({ params }: WorkPageProps) {
             setShareImageData(null);
           }}
           onSuccess={handleShareSuccess}
-        />
-      )}
-
-      {/* 닉네임 설정 다이얼로그 */}
-      {showNicknameDialog && (
-        <NicknameDialog
-          onSubmit={(nickname) => {
-            setNickname(nickname);
-            setShowNicknameDialog(false);
-          }}
-          onClose={() => setShowNicknameDialog(false)}
-          initialValue={user?.nickname || ""}
-          title={user ? "닉네임 변경" : "닉네임 설정"}
-          description={
-            user
-              ? "새 닉네임을 입력해 주세요."
-              : "갤러리에서 사용할 닉네임을 입력해 주세요."
-          }
-          submitLabel={user ? "변경" : "확인"}
         />
       )}
 

@@ -1,69 +1,157 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-
-interface User {
-  nickname: string;
-  createdAt: string;
-}
+import { User } from '@supabase/supabase-js';
+import { supabase, toAuthUser, AuthUser, signOut as supabaseSignOut, updateNickname, getSession } from '@/lib/supabase';
 
 interface UserContextType {
-  user: User | null;
+  user: AuthUser | null;
+  supabaseUser: User | null;
   isLoading: boolean;
-  setNickname: (nickname: string) => void;
-  clearUser: () => void;
+  isAuthenticated: boolean;
+  signOut: () => Promise<void>;
+  updateUserNickname: (nickname: string) => Promise<{ error: Error | null }>;
+  refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'dice-art-user';
-
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 초기 로드
-  useEffect(() => {
+  // DB에 사용자 레코드 생성/업데이트
+  const syncUserToDatabase = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setUser(parsed);
+      const { session } = await getSession();
+      if (!session) return;
+
+      await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to sync user to database:', error);
+    }
+  }, []);
+
+  // 사용자 정보 새로고침
+  const refreshUser = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+      if (currentUser) {
+        setSupabaseUser(currentUser);
+        setUser(toAuthUser(currentUser));
+      } else {
+        setSupabaseUser(null);
+        setUser(null);
       }
     } catch (error) {
-      console.error('Failed to load user:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to refresh user:', error);
+      setSupabaseUser(null);
+      setUser(null);
     }
   }, []);
 
-  // 닉네임 설정
-  const setNickname = useCallback((nickname: string) => {
-    const newUser: User = {
-      nickname: nickname.trim(),
-      createdAt: new Date().toISOString(),
+  // 초기 로드 및 Auth 상태 변경 구독
+  useEffect(() => {
+    // null 체크 후 로컬 변수에 할당하여 TypeScript가 이해하도록 함
+    const supabaseClient = supabase;
+    if (!supabaseClient) {
+      setIsLoading(false);
+      return;
+    }
+
+    // 현재 세션 확인
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setUser(toAuthUser(session.user));
+        }
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-      setUser(newUser);
-    } catch (error) {
-      console.error('Failed to save user:', error);
+    initializeAuth();
+
+    // Auth 상태 변경 구독
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setUser(toAuthUser(session.user));
+
+          // 로그인/회원가입 시 DB에 사용자 레코드 동기화
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            // 약간의 지연 후 동기화 (상태 업데이트 후 실행)
+            setTimeout(() => {
+              syncUserToDatabase();
+            }, 100);
+          }
+        } else {
+          setSupabaseUser(null);
+          setUser(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [syncUserToDatabase]);
+
+  // 로그아웃
+  const signOut = useCallback(async () => {
+    const { error } = await supabaseSignOut();
+    if (error) {
+      console.error('Sign out error:', error);
     }
+    setSupabaseUser(null);
+    setUser(null);
   }, []);
 
-  // 사용자 삭제
-  const clearUser = useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      setUser(null);
-    } catch (error) {
-      console.error('Failed to clear user:', error);
+  // 닉네임 업데이트
+  const updateUserNickname = useCallback(async (nickname: string) => {
+    const { error } = await updateNickname(nickname);
+
+    if (!error) {
+      // 로컬 상태 업데이트
+      setUser((prev) => prev ? { ...prev, nickname } : null);
+      // Supabase에서 최신 정보 가져오기
+      await refreshUser();
     }
-  }, []);
+
+    return { error };
+  }, [refreshUser]);
 
   return (
-    <UserContext.Provider value={{ user, isLoading, setNickname, clearUser }}>
+    <UserContext.Provider
+      value={{
+        user,
+        supabaseUser,
+        isLoading,
+        isAuthenticated: !!user,
+        signOut,
+        updateUserNickname,
+        refreshUser,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );

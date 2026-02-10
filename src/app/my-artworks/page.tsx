@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/contexts/UserContext';
 import { ArtworkListItem, ArtworkListResponse, Artwork } from '@/types';
-import { Header, ArtworkCard, ArtworkModal, NicknameDialog, DeleteConfirmDialog } from '@/components';
+import { Header, ArtworkCard, ArtworkModal, DeleteConfirmDialog } from '@/components';
+import { getSession } from '@/lib/supabase';
 
 export default function MyArtworksPage() {
-  const { user, setNickname, isLoading: isUserLoading } = useUser();
+  const { user, isAuthenticated, isLoading: isUserLoading } = useUser();
   const [artworks, setArtworks] = useState<ArtworkListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +34,6 @@ export default function MyArtworksPage() {
 
   // 삭제 상태
   const [artworkToDelete, setArtworkToDelete] = useState<ArtworkListItem | null>(null);
-
-  // 닉네임 다이얼로그
-  const [showNicknameDialog, setShowNicknameDialog] = useState(false);
 
   // 작품 목록 불러오기
   const fetchArtworks = useCallback(async (pageNum: number, append: boolean = false) => {
@@ -73,12 +71,12 @@ export default function MyArtworksPage() {
 
   // 사용자 로드 후 작품 목록 불러오기
   useEffect(() => {
-    if (!isUserLoading && user?.nickname) {
+    if (!isUserLoading && isAuthenticated && user?.nickname) {
       fetchArtworks(1);
-    } else if (!isUserLoading && !user?.nickname) {
+    } else if (!isUserLoading) {
       setIsLoading(false);
     }
-  }, [isUserLoading, user?.nickname, fetchArtworks]);
+  }, [isUserLoading, isAuthenticated, user?.nickname, fetchArtworks]);
 
   // 더 불러오기
   const loadMore = () => {
@@ -123,8 +121,14 @@ export default function MyArtworksPage() {
     if (!artworkToDelete) return;
 
     try {
+      // 세션 토큰 가져오기
+      const { session } = await getSession();
+
       const response = await fetch(`/api/artworks/${artworkToDelete.id}`, {
         method: 'DELETE',
+        headers: session?.access_token ? {
+          'Authorization': `Bearer ${session.access_token}`,
+        } : {},
       });
 
       if (!response.ok) {
@@ -144,12 +148,6 @@ export default function MyArtworksPage() {
     }
   };
 
-  // 닉네임 설정
-  const handleNicknameSubmit = (nickname: string) => {
-    setNickname(nickname);
-    setShowNicknameDialog(false);
-  };
-
   // 로딩 중
   if (isUserLoading) {
     return (
@@ -159,12 +157,11 @@ export default function MyArtworksPage() {
     );
   }
 
-  // 닉네임 미설정
-  if (!user?.nickname) {
+  // 로그인 필요
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen mesh-gradient flex flex-col">
         <Header
-          onNicknameClick={() => setShowNicknameDialog(true)}
           rightContent={
             <Link href="/" className="btn-secondary text-sm">
               홈으로
@@ -180,29 +177,22 @@ export default function MyArtworksPage() {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-neutral-700 mb-2">
-              닉네임을 설정해 주세요
+              로그인이 필요합니다
             </h2>
             <p className="text-neutral-500 mb-8 max-w-sm mx-auto">
-              내 작품을 보려면 먼저 닉네임을 설정해야 합니다.
+              공유한 작품을 보려면 로그인해 주세요.
             </p>
-            <button
-              onClick={() => setShowNicknameDialog(true)}
+            <Link
+              href="/auth/login?redirect=/my-artworks"
               className="btn-primary inline-flex items-center gap-2 px-6 py-3"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
-              닉네임 설정하기
-            </button>
+              로그인하기
+            </Link>
           </div>
         </main>
-
-        {showNicknameDialog && (
-          <NicknameDialog
-            onSubmit={handleNicknameSubmit}
-            onClose={() => setShowNicknameDialog(false)}
-          />
-        )}
       </div>
     );
   }
@@ -210,8 +200,6 @@ export default function MyArtworksPage() {
   return (
     <div className="min-h-screen mesh-gradient flex flex-col">
       <Header
-        nickname={user?.nickname}
-        onNicknameClick={() => setShowNicknameDialog(true)}
         rightContent={
           <Link href="/?upload=true" className="btn-primary text-sm">
             시작하기
@@ -348,18 +336,6 @@ export default function MyArtworksPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
         </div>
-      )}
-
-      {/* 닉네임 다이얼로그 */}
-      {showNicknameDialog && (
-        <NicknameDialog
-          onSubmit={handleNicknameSubmit}
-          onClose={() => setShowNicknameDialog(false)}
-          initialValue={user?.nickname}
-          title="닉네임 변경"
-          description="새 닉네임을 입력해 주세요."
-          submitLabel="변경"
-        />
       )}
 
       {/* 푸터 */}
