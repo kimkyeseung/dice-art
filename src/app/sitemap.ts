@@ -2,24 +2,33 @@ import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dice-art.vercel.app';
-
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: siteUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1.0,
-    },
-    {
-      url: `${siteUrl}/gallery`,
-      lastModified: new Date(),
-      changeFrequency: 'hourly',
-      priority: 0.9,
-    },
-  ];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dice-art.kimkyeseung.com';
 
   try {
+    // 최신 아트워크 날짜를 가져와서 gallery 페이지 lastModified로 사용
+    const latestArtwork = await prisma.artwork.findFirst({
+      select: { createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const galleryLastModified = latestArtwork?.createdAt || new Date();
+
+    const staticPages: MetadataRoute.Sitemap = [
+      {
+        url: siteUrl,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 1.0,
+      },
+      {
+        url: `${siteUrl}/gallery`,
+        lastModified: galleryLastModified,
+        changeFrequency: 'hourly',
+        priority: 0.9,
+      },
+    ];
+
+    // 전체 아트워크 가져오기 (제한 없음)
     const artworks = await prisma.artwork.findMany({
       select: {
         id: true,
@@ -28,7 +37,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy: {
         createdAt: 'desc',
       },
-      take: 100,
     });
 
     const artworkPages: MetadataRoute.Sitemap = artworks.map((artwork) => ({
@@ -40,6 +48,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return [...staticPages, ...artworkPages];
   } catch {
-    return staticPages;
+    // 에러 시 정적 페이지만 반환
+    return [
+      {
+        url: siteUrl,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 1.0,
+      },
+      {
+        url: `${siteUrl}/gallery`,
+        lastModified: new Date(),
+        changeFrequency: 'hourly',
+        priority: 0.9,
+      },
+    ];
   }
 }

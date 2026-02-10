@@ -1,10 +1,65 @@
 import Link from 'next/link';
+import { Metadata } from 'next';
 import { getArtworks } from '@/lib/artworkStore';
 import { Header } from '@/components/Header';
 import { GalleryClient } from './GalleryClient';
+import { prisma } from '@/lib/prisma';
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dice-art.kimkyeseung.com';
+const ITEMS_PER_PAGE = 12;
 
 interface GalleryPageProps {
   searchParams: Promise<{ page?: string }>;
+}
+
+// 동적 메타데이터 생성 (페이지네이션 SEO)
+export async function generateMetadata({ searchParams }: GalleryPageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page || '1', 10));
+
+  // 전체 개수 조회
+  const total = await prisma.artwork.count();
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const title = page === 1 ? '갤러리' : `갤러리 - ${page}페이지`;
+  const description = page === 1
+    ? 'Dice Art로 만든 멋진 주사위 모자이크 아트 작품들을 감상하세요. 다른 사용자들이 공유한 창작 작품을 둘러보고 영감을 얻어보세요.'
+    : `Dice Art 갤러리 ${page}페이지. 총 ${total}개의 주사위 모자이크 아트 작품을 감상하세요.`;
+
+  const metadata: Metadata = {
+    title,
+    description,
+    openGraph: {
+      title: `${title} | Dice Art`,
+      description,
+      url: page === 1 ? `${siteUrl}/gallery` : `${siteUrl}/gallery?page=${page}`,
+    },
+    alternates: {
+      canonical: page === 1 ? `${siteUrl}/gallery` : `${siteUrl}/gallery?page=${page}`,
+    },
+  };
+
+  // rel prev/next 링크 추가
+  const otherLinks: Array<{ rel: string; url: string }> = [];
+
+  if (page > 1) {
+    const prevPage = page - 1;
+    const prevUrl = prevPage === 1 ? `${siteUrl}/gallery` : `${siteUrl}/gallery?page=${prevPage}`;
+    otherLinks.push({ rel: 'prev', url: prevUrl });
+  }
+
+  if (page < totalPages) {
+    otherLinks.push({ rel: 'next', url: `${siteUrl}/gallery?page=${page + 1}` });
+  }
+
+  if (otherLinks.length > 0) {
+    metadata.other = otherLinks.reduce((acc, link) => {
+      acc[`link:${link.rel}`] = link.url;
+      return acc;
+    }, {} as Record<string, string>);
+  }
+
+  return metadata;
 }
 
 export default async function GalleryPage({ searchParams }: GalleryPageProps) {

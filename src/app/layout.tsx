@@ -14,7 +14,7 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dice-art.vercel.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dice-art.kimkyeseung.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -108,7 +108,23 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-const jsonLd = {
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Dice Art",
+  url: siteUrl,
+  logo: `${siteUrl}/android-chrome-512x512.png`,
+  sameAs: [
+    "https://github.com/kimkyeseung",
+  ],
+  founder: {
+    "@type": "Person",
+    name: "kimkyeseung",
+    url: "https://github.com/kimkyeseung",
+  },
+};
+
+const webApplicationJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "Dice Art",
@@ -118,10 +134,17 @@ const jsonLd = {
   url: siteUrl,
   applicationCategory: "MultimediaApplication",
   operatingSystem: "Web",
+  browserRequirements: "Requires JavaScript. Requires HTML5.",
   offers: {
     "@type": "Offer",
     price: "0",
-    priceCurrency: "KRW",
+    priceCurrency: "USD",
+    availability: "https://schema.org/InStock",
+  },
+  provider: {
+    "@type": "Organization",
+    name: "Dice Art",
+    url: siteUrl,
   },
   author: {
     "@type": "Person",
@@ -146,6 +169,8 @@ const jsonLd = {
     "자동 저장 기능",
     "모바일 지원",
   ],
+  screenshot: `${siteUrl}/og-image.png`,
+  softwareVersion: "1.0.0",
   keywords: "dice art, anna dice artworks, 주사위 아트, dice mosaic, 모자이크 아트",
   inLanguage: "ko",
 };
@@ -165,7 +190,11 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationJsonLd) }}
         />
       </head>
       <body

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dice-art.vercel.app';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dice-art.kimkyeseung.com';
 
 export const metadata: Metadata = {
   title: '갤러리',
@@ -29,11 +29,12 @@ export const metadata: Metadata = {
   },
 };
 
-const jsonLd = {
+// CollectionPage + ImageGallery 스키마
+const collectionJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: 'Dice Art 갤러리',
-  description: 'Dice Art로 만든 주사위 모자이크 아트 작품 갤러리',
+  description: 'Dice Art로 만든 주사위 모자이크 아트 작품 갤러리. 사용자들이 만든 주사위 모자이크 아트 작품을 감상하세요.',
   url: `${siteUrl}/gallery`,
   isPartOf: {
     '@type': 'WebSite',
@@ -43,6 +44,13 @@ const jsonLd = {
   about: {
     '@type': 'Thing',
     name: '주사위 모자이크 아트',
+    description: '이미지를 주사위 눈금으로 표현한 모자이크 아트 작품',
+  },
+  mainEntity: {
+    '@type': 'ImageGallery',
+    name: 'Dice Art 작품 갤러리',
+    description: '사용자들이 Dice Art로 만든 주사위 모자이크 아트 작품 모음',
+    url: `${siteUrl}/gallery`,
   },
   inLanguage: 'ko',
 };
@@ -75,7 +83,7 @@ export default function GalleryLayout({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
       />
       <script
         type="application/ld+json"
