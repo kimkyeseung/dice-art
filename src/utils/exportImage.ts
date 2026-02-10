@@ -1,18 +1,5 @@
 import { GridState, DiceValue } from '@/types';
-
-// 주사위 눈의 위치 정의 (정규화된 좌표, 0-1 범위)
-// Dice.tsx와 일치: CSS에서 top/left 10%에 눈 배치, 눈 크기 30%이므로 중심은 25%
-// 반대편은 1 - 0.25 = 0.75 (right/bottom 10% + 눈 크기 반 15%)
-const dotPositions: Record<DiceValue, { x: number; y: number }[]> = {
-  0: [], // 빈 면 (눈 없음)
-  1: [{ x: 0.5, y: 0.5 }],
-  2: [{ x: 0.75, y: 0.25 }, { x: 0.25, y: 0.75 }],
-  3: [{ x: 0.75, y: 0.25 }, { x: 0.5, y: 0.5 }, { x: 0.25, y: 0.75 }],
-  4: [{ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.25 }, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.75 }],
-  5: [{ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.25 }, { x: 0.5, y: 0.5 }, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.75 }],
-  // 6 주사위: Dice.tsx에서 left 15%, right 15%, top 7%, bottom 7% + 눈 크기 반 15%
-  6: [{ x: 0.30, y: 0.22 }, { x: 0.30, y: 0.5 }, { x: 0.30, y: 0.78 }, { x: 0.70, y: 0.22 }, { x: 0.70, y: 0.5 }, { x: 0.70, y: 0.78 }],
-};
+import { DOT_POSITIONS } from './dicePositions';
 
 /**
  * 단일 주사위를 Canvas에 그립니다.
@@ -35,7 +22,7 @@ function drawDice(
 
   // 주사위 눈 (흰색 원)
   ctx.fillStyle = '#ffffff';
-  const dots = dotPositions[value];
+  const dots = DOT_POSITIONS[value];
 
   for (const dot of dots) {
     // 정규화된 좌표(0-1)를 실제 좌표로 변환

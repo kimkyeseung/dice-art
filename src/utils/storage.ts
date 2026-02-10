@@ -1,4 +1,5 @@
 import { GridState, WorkState, WorkEntry } from '@/types';
+import { calculateProgress } from './imageProcessor';
 
 const WORKS_LIST_KEY = 'dice-art-works';
 const WORK_KEY_PREFIX = 'dice-art-work-';
@@ -9,23 +10,6 @@ const OLD_STORAGE_KEY = 'dice-art-work'; // 마이그레이션용
  */
 export function generateWorkId(): string {
   return crypto.randomUUID();
-}
-
-/**
- * 진행률 계산
- */
-function calculateProgress(gridState: GridState): number {
-  let filled = 0;
-  let total = 0;
-  for (const row of gridState.cells) {
-    for (const cell of row) {
-      total++;
-      if (cell.filledValue !== null) {
-        filled++;
-      }
-    }
-  }
-  return total > 0 ? Math.round((filled / total) * 100) : 0;
 }
 
 /**
@@ -94,7 +78,6 @@ export function saveWork(
   }
 
   saveWorksList(works);
-  console.log('[Dice Art] 작업이 저장되었습니다.', new Date().toLocaleTimeString());
 
   return workState;
 }
@@ -132,8 +115,6 @@ export function deleteWork(workId: string): void {
     // 작업 목록에서 제거
     const works = listWorks().filter(w => w.id !== workId);
     saveWorksList(works);
-
-    console.log('[Dice Art] 작업이 삭제되었습니다:', workId);
   } catch (error) {
     console.error('[Dice Art] 삭제 실패:', error);
   }
@@ -198,10 +179,8 @@ export function migrateOldStorage(): void {
 
     // 기존 데이터 삭제
     localStorage.removeItem(OLD_STORAGE_KEY);
-
-    console.log('[Dice Art] 마이그레이션 완료:', newId);
   } catch (error) {
-    console.error('[Dice Art] 마이그레이션 실패:', error);
+    // 마이그레이션 실패는 무시 (데이터 손실 없음)
   }
 }
 

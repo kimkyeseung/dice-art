@@ -1,4 +1,5 @@
 import { GridState, DiceValue, CellState } from '@/types';
+import { DOT_POSITIONS } from './dicePositions';
 
 // 색상 상수
 export const COLORS = {
@@ -10,23 +11,6 @@ export const COLORS = {
   WARNING_BG: '#facc15',    // yellow-400
   WARNING_TEXT: '#713f12',  // yellow-900
 } as const;
-
-// 주사위 눈의 위치 정의 (정규화된 좌표, 0-1 범위)
-// Dice.tsx의 CSS 위치를 정규화된 좌표로 변환
-// top/left 10% + 눈 크기 반(15%) = 중심 25%, 반대편 = 75%
-const DOT_POSITIONS: Record<DiceValue, { x: number; y: number }[]> = {
-  0: [], // 빈 면
-  1: [{ x: 0.5, y: 0.5 }],
-  2: [{ x: 0.75, y: 0.25 }, { x: 0.25, y: 0.75 }],
-  3: [{ x: 0.75, y: 0.25 }, { x: 0.5, y: 0.5 }, { x: 0.25, y: 0.75 }],
-  4: [{ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.25 }, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.75 }],
-  5: [{ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.25 }, { x: 0.5, y: 0.5 }, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.75 }],
-  // 6 주사위: left 15% + 15% = 30%, right 15% + 15% = 70%, top 7% + 15% = 22%, bottom 7% + 15% = 78%
-  6: [
-    { x: 0.30, y: 0.22 }, { x: 0.30, y: 0.5 }, { x: 0.30, y: 0.78 },
-    { x: 0.70, y: 0.22 }, { x: 0.70, y: 0.5 }, { x: 0.70, y: 0.78 },
-  ],
-};
 
 export interface DrawOptions {
   scale?: number;
