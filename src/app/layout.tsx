@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import { UserProvider } from "@/contexts/UserContext";
 
@@ -200,6 +201,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3289333115172248"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         <UserProvider>{children}</UserProvider>
       </body>
     </html>
