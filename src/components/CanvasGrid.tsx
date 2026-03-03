@@ -63,6 +63,7 @@ export const CanvasGrid = memo(function CanvasGrid({
 }: CanvasGridProps) {
   const { width, height } = gridState;
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dprRef = useRef(1);
   const animationsRef = useRef<Map<string, DiceAnimation>>(new Map());
   const animationFrameRef = useRef<number | null>(null);
 
@@ -99,10 +100,20 @@ export const CanvasGrid = memo(function CanvasGrid({
   const renderFullGrid = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    dprRef.current = dpr;
+
+    // Set canvas buffer size for high DPI displays
+    canvas.width = canvasSize.width * dpr;
+    canvas.height = canvasSize.height * dpr;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     renderGrid(ctx, gridStateRef.current, renderOptions);
-  }, [renderOptions]);
+  }, [renderOptions, canvasSize.width, canvasSize.height]);
 
   // Render single cell immediately
   const renderCell = useCallback((row: number, col: number, value: DiceValue | null, animOpts?: { scale: number; opacity: number }) => {
@@ -110,6 +121,8 @@ export const CanvasGrid = memo(function CanvasGrid({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    ctx.setTransform(dprRef.current, 0, 0, dprRef.current, 0, 0);
 
     const cells = gridStateRef.current.cells;
     const cell = cells[row]?.[col];
@@ -339,8 +352,6 @@ export const CanvasGrid = memo(function CanvasGrid({
     <canvas
       ref={canvasRef}
       data-testid="canvas-grid"
-      width={canvasSize.width}
-      height={canvasSize.height}
       className={`touch-none ${isPanMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
       style={{
         width: canvasSize.width,
