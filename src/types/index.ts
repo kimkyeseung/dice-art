@@ -101,7 +101,6 @@ export interface Comment {
 export interface CreateCommentRequest {
   content: string;
   authorName: string;
-  userId?: string;  // 로그인한 사용자의 경우 userId 포함
 }
 
 // 댓글 목록 응답

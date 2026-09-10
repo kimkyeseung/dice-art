@@ -4,23 +4,11 @@ import {
   getArtworks,
   validateCreateArtworkRequest,
 } from '@/lib/artworkStore';
-import { requireAuth } from '@/lib/authUtils';
 import { ArtworkListResponse, ApiErrorResponse } from '@/types';
 
-// POST /api/artworks - 작품 업로드 (인증 필요)
+// POST /api/artworks - 작품 업로드
 export async function POST(request: NextRequest) {
   try {
-    // 인증 확인
-    const { user, error: authError } = await requireAuth(request);
-
-    if (authError || !user) {
-      const error: ApiErrorResponse = {
-        error: 'UNAUTHORIZED',
-        message: authError || '로그인이 필요합니다.',
-      };
-      return NextResponse.json(error, { status: 401 });
-    }
-
     const body = await request.json();
 
     // 유효성 검사
@@ -50,15 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(error, { status: 400 });
     }
 
-    // userId 추가 (인증된 사용자)
-    const artworkData = {
-      ...body,
-      userId: user.id,
-      // authorName은 닉네임으로 설정 (user_metadata에서 가져오기)
-      authorName: user.user_metadata?.nickname || body.authorName,
-    };
-
-    const artwork = await createArtwork(artworkData);
+    const artwork = await createArtwork(body);
 
     return NextResponse.json(artwork, { status: 201 });
   } catch (error) {
