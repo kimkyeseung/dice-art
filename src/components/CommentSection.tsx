@@ -1,20 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Comment } from '@/types';
-import { useUser } from '@/contexts/UserContext';
-import { getSession } from '@/lib/supabase';
 
 interface CommentSectionProps {
   artworkId: string;
 }
 
 export function CommentSection({ artworkId }: CommentSectionProps) {
-  const { user, isAuthenticated, isLoading: isUserLoading } = useUser();
   const [comments, setComments] = useState<Comment[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [authorName, setAuthorName] = useState('');
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,12 +39,13 @@ export function CommentSection({ artworkId }: CommentSectionProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!content.trim()) {
-      setError('댓글 내용을 입력해 주세요.');
+    if (!authorName.trim()) {
+      setError('이름을 입력해 주세요.');
       return;
     }
 
-    if (!isAuthenticated) {
+    if (!content.trim()) {
+      setError('댓글 내용을 입력해 주세요.');
       return;
     }
 
@@ -55,23 +53,14 @@ export function CommentSection({ artworkId }: CommentSectionProps) {
     setError(null);
 
     try {
-      // 세션 토큰 가져오기
-      const { session, error: sessionError } = await getSession();
-
-      if (sessionError || !session) {
-        setError('세션이 만료되었습니다. 다시 로그인해주세요.');
-        return;
-      }
-
       const response = await fetch(`/api/artworks/${artworkId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           content: content.trim(),
-          authorName: user?.nickname || 'Anonymous',
+          authorName: authorName.trim(),
         }),
       });
 
@@ -115,52 +104,42 @@ export function CommentSection({ artworkId }: CommentSectionProps) {
     <div className="border-t border-neutral-200">
       {/* 댓글 입력 */}
       <div className="p-4 border-b border-neutral-100">
-        {isUserLoading ? (
-          <div className="flex items-center justify-center py-2">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <form onSubmit={handleSubmit}>
+          <div className="mb-2">
+            <input
+              type="text"
+              value={authorName}
+              onChange={(e) => setAuthorName(e.target.value)}
+              placeholder="이름"
+              maxLength={50}
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-neutral-50"
+            />
           </div>
-        ) : isAuthenticated && user ? (
-          <form onSubmit={handleSubmit}>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
-                {user.nickname.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="댓글을 입력하세요..."
-                  maxLength={500}
-                  disabled={isSubmitting}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-neutral-50"
-                />
-                {error && (
-                  <p className="mt-1 text-sm text-red-500">{error}</p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={isSubmitting || !content.trim()}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              >
-                {isSubmitting ? '...' : '작성'}
-              </button>
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="댓글을 입력하세요..."
+                maxLength={500}
+                disabled={isSubmitting}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-neutral-50"
+              />
+              {error && (
+                <p className="mt-1 text-sm text-red-500">{error}</p>
+              )}
             </div>
-          </form>
-        ) : (
-          <div className="text-center py-2">
-            <p className="text-sm text-neutral-600 mb-2">
-              댓글을 작성하려면 로그인이 필요합니다.
-            </p>
-            <Link
-              href={`/auth/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/gallery')}`}
-              className="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
+            <button
+              type="submit"
+              disabled={isSubmitting || !content.trim()}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
-              로그인
-            </Link>
+              {isSubmitting ? '...' : '작성'}
+            </button>
           </div>
-        )}
+        </form>
       </div>
 
       {/* 댓글 목록 */}

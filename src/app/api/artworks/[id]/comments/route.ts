@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createComment, getComments, validateCreateCommentRequest } from '@/lib/artworkStore';
-import { requireAuth } from '@/lib/authUtils';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -28,22 +27,12 @@ export async function GET(
   }
 }
 
-// POST /api/artworks/[id]/comments - 댓글 작성 (인증 필요)
+// POST /api/artworks/[id]/comments - 댓글 작성
 export async function POST(
   request: NextRequest,
   context: RouteContext
 ) {
   try {
-    // 인증 확인
-    const { user, error: authError } = await requireAuth(request);
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED', message: authError || '로그인이 필요합니다.' },
-        { status: 401 }
-      );
-    }
-
     const { id } = await context.params;
     const body = await request.json();
 
@@ -54,14 +43,7 @@ export async function POST(
       );
     }
 
-    // userId 추가 및 닉네임 설정
-    const commentData = {
-      ...body,
-      userId: user.id,
-      authorName: user.user_metadata?.nickname || body.authorName,
-    };
-
-    const comment = await createComment(id, commentData);
+    const comment = await createComment(id, body);
 
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {

@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useUser } from '@/contexts/UserContext';
 
 interface NavItem {
   label: string;
@@ -33,36 +32,14 @@ export function Header({
   compact = false,
 }: HeaderProps) {
   const pathname = usePathname();
-  const { user, isAuthenticated, isLoading, signOut } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-
-  // 프로필 메뉴 외부 클릭 감지
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileMenuOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const navItems: NavItem[] = [
     { label: '갤러리', href: '/gallery', show: true },
     { label: '내 작업', href: '/my-works', badge: workCount, show: true },
-    { label: '공유한 작품', href: '/my-artworks', show: isAuthenticated },
   ];
 
   const isActive = (href: string) => pathname === href;
-
-  const handleSignOut = async () => {
-    await signOut();
-    setIsProfileMenuOpen(false);
-    setIsMobileMenuOpen(false);
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -137,63 +114,9 @@ export function Header({
             )}
           </div>
 
-          {/* 오른쪽: 커스텀 콘텐츠 + 인증 버튼 + 모바일 메뉴 버튼 */}
+          {/* 오른쪽: 커스텀 콘텐츠 + 모바일 메뉴 버튼 */}
           <div className="flex items-center gap-2 sm:gap-3">
             {rightContent}
-
-            {/* 데스크탑: 인증 상태에 따른 UI */}
-            {showNav && !isLoading && (
-              <div className="hidden md:block">
-                {isAuthenticated && user ? (
-                  <div className="relative" ref={profileMenuRef}>
-                    <button
-                      onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
-                    >
-                      <div className="w-7 h-7 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {user.nickname.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-neutral-700 max-w-[100px] truncate">
-                        {user.nickname}
-                      </span>
-                      <svg className={`w-4 h-4 text-neutral-500 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-
-                    {/* 프로필 드롭다운 메뉴 */}
-                    {isProfileMenuOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-50">
-                        <div className="px-4 py-2 border-b border-neutral-100">
-                          <p className="text-sm font-medium text-neutral-800 truncate">{user.nickname}</p>
-                          <p className="text-xs text-neutral-500 truncate">{user.email}</p>
-                        </div>
-                        <Link
-                          href="/my-artworks"
-                          onClick={() => setIsProfileMenuOpen(false)}
-                          className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
-                        >
-                          공유한 작품
-                        </Link>
-                        <button
-                          onClick={handleSignOut}
-                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                        >
-                          로그아웃
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Link
-                    href="/auth/login"
-                    className="px-4 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
-                  >
-                    로그인
-                  </Link>
-                )}
-              </div>
-            )}
 
             {/* 모바일 메뉴 버튼 */}
             {showNav && (
@@ -249,39 +172,6 @@ export function Header({
                   </span>
                 </Link>
               ))}
-
-              {/* 모바일 인증 영역 */}
-              {!isLoading && (
-                <div className="mt-2 pt-2 border-t border-neutral-200">
-                  {isAuthenticated && user ? (
-                    <>
-                      <div className="px-3 py-2 flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                          {user.nickname.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-neutral-800">{user.nickname}</p>
-                          <p className="text-xs text-neutral-500">{user.email}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full mt-1 px-3 py-2.5 text-sm text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        로그아웃
-                      </button>
-                    </>
-                  ) : (
-                    <Link
-                      href="/auth/login"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="block px-3 py-2.5 text-sm text-center font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
-                    >
-                      로그인
-                    </Link>
-                  )}
-                </div>
-              )}
             </nav>
           </div>
         )}

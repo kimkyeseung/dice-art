@@ -28,7 +28,6 @@ npx prisma studio        # Open Prisma database GUI
 - `/` - Main page: project intro, image upload, redirects to `/work/[id]`
 - `/work/[id]` - Work page: grid editing, auto-save, dice painting
 - `/my-works` - My works: list of saved works (localStorage), continue or delete
-- `/my-artworks` - My artworks: list of shared artworks (from database)
 - `/gallery` - Gallery: public artworks from all users
 
 ### Core Data Flow
@@ -87,7 +86,6 @@ For grids larger than 50x50 (2500+ cells), the app splits them into manageable s
 
 ### State Management
 
-- **UserContext** (`src/contexts/UserContext.tsx`): Stores nickname in localStorage for gallery attribution
 - **useAutoSave** hook: Saves work to localStorage every 60 seconds (requires workId)
 - **useZoomPan** hook: Ctrl+wheel zoom, supports 0.5x-3x scale
 
@@ -109,7 +107,7 @@ PostgreSQL (Neon) with Prisma ORM. Single `Artwork` model stores gridState as JS
 - Comprehensive metadata in `src/app/layout.tsx` (Open Graph, Twitter Cards, JSON-LD)
 - Dynamic sitemap (`src/app/sitemap.ts`) includes gallery artworks
 - robots.txt via `src/app/robots.ts`
-- Page-specific metadata in gallery and my-artworks layouts
+- Page-specific metadata in gallery layout
 - PWA manifest at `public/manifest.json`
 
 ## Path Aliases
