@@ -276,8 +276,13 @@ export default function WorkPage({ params }: WorkPageProps) {
         return;
       }
 
-      // Ctrl+Shift+D: 정답대로 채우기 (디버그)
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "d") {
+      // Ctrl+Shift+D: 정답대로 채우기 (디버그, 개발 환경 전용 - E2E 테스트에서 사용)
+      if (
+        process.env.NODE_ENV === "development" &&
+        e.ctrlKey &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "d"
+      ) {
         e.preventDefault();
         if (gridState) {
           setGridState(fillCorrect(gridState));

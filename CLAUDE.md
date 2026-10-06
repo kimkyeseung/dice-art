@@ -61,7 +61,6 @@ Key functions in `src/utils/storage.ts`:
 - **Gallery UI**: `src/app/gallery/GalleryClient.tsx`, `ArtworkCard`, `ArtworkModal` (detail, like, download), `CommentSection`
 - **Header** (`src/components/Header.tsx`): Global navigation
 - **DebugControls** (`src/components/DebugControls.tsx`): Fill/clear helpers from `src/utils/debugUtils.ts`; renders only when `NODE_ENV === 'development'`
-- `NicknameDialog` and `ResumeWorkDialog` are exported from `src/components/index.ts` but currently unused (leftovers from the removed login feature / old single-work flow)
 - **VirtualJoystick** (`src/components/VirtualJoystick.tsx`): Mobile-only joystick for panning the grid view. Uses pointer events and requestAnimationFrame for smooth continuous movement
 - **ZoomControls** (`src/components/ZoomControls.tsx`): Zoom in/out buttons with progress preview button. Shows current zoom percentage
 - **ProgressPreviewDialog** (`src/components/ProgressPreviewDialog.tsx`): Modal dialog showing current progress as a canvas preview. Filled cells shown as dice, remaining cells as white grid
@@ -158,7 +157,7 @@ See `.env.example` and README: `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABA
 - The app uses a custom `dice-pop` animation for visual feedback when placing dice (Canvas-based, 150ms, scale 0.8→1.1→1.0)
 - Export (`src/utils/exportImage.ts`) renders dice at 60px cell size with no gap between cells
 - Preset images come from picsum.photos public URLs (no API key)
-- `Ctrl+Shift+D` on the work page fills the grid with the correct answers (debug shortcut; not gated by `NODE_ENV`)
+- `Ctrl+Shift+D` on the work page fills the grid with the correct answers (debug shortcut, development only; E2E tests rely on it since they run against `npm run dev`)
 - DiceValue type is `0 | 1 | 2 | 3 | 4 | 5 | 6` (includes 0 for blank dice)
 - PaletteValue type is `DiceValue | 'eraser' | 'pan'` for palette selection
 - SectionInfo/SectionLayout types define section boundaries and navigation structure
