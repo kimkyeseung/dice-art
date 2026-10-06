@@ -34,7 +34,7 @@ npx prisma studio        # Open Prisma database GUI
 
 1. **Image Processing** (`src/utils/imageProcessor.ts`): Uploaded images are scaled to a grid (default 50 cells on longest side), and each pixel's luminance is mapped to a DiceValue (0-6) using ITU-R BT.601 standard
 2. **Grid State** (`src/types/index.ts`): `GridState` contains a 2D array of `CellState`, each with `targetValue` (what to fill) and `filledValue` (user's input)
-3. **Persistence**: Work-in-progress saved to localStorage (`src/utils/storage.ts`) with UUID-based multi-work support, completed artworks saved to PostgreSQL via Prisma
+3. **Persistence**: Work-in-progress saved to localStorage (`src/utils/storage.ts`) with UUID-based multi-work support. Completed artworks shared to the gallery: images uploaded from the client to Supabase Storage (`src/utils/supabaseStorage.ts`, public `artworks` bucket), metadata saved to PostgreSQL via Prisma
 
 ### Multi-Work Storage
 
@@ -54,7 +54,6 @@ Key functions in `src/utils/storage.ts`:
 
 - **ImageUploader** (`src/components/ImageUploader.tsx`): Handles image upload via drag-and-drop or file selection. Also provides 4 Unsplash preset images for quick start
 - **CanvasGrid** (`src/components/CanvasGrid.tsx`): Main interactive grid using HTML5 Canvas for performance. Handles mouse/touch drag painting with Bresenham's line algorithm. Left-click fills, right-click/long-press clears. Uses refs for latest state access to avoid stale closures
-- **Grid** (`src/components/Grid.tsx`): Legacy React component-based grid (kept for reference/rollback)
 - **Dice/NumberCell**: Render filled dice or target number respectively (used in DicePalette)
 - **DicePalette** (`src/components/DicePalette.tsx`): Bottom toolbar for selecting dice value (0-6) or eraser. Keyboard shortcuts: 0-6 for dice, E for eraser. Mobile layout uses 2 rows (4+4), desktop uses single row
 - **VirtualJoystick** (`src/components/VirtualJoystick.tsx`): Mobile-only joystick for panning the grid view. Uses pointer events and requestAnimationFrame for smooth continuous movement
@@ -92,15 +91,26 @@ For grids larger than 50x50 (2500+ cells), the app splits them into manageable s
 ### API Routes (Next.js App Router)
 
 All under `src/app/api/artworks/`:
-- `POST /api/artworks` - Upload completed artwork (requires title, authorName, gridState, imageData)
+- `POST /api/artworks` - Create gallery artwork (requires title, authorName, gridState, imageUrl, thumbnailUrl, previewUrl). Image URLs must be public URLs of our Supabase `artworks` bucket (`isArtworkStorageUrl`)
 - `GET /api/artworks` - List artworks (pagination, optional author filter)
 - `GET /api/artworks/[id]` - Get single artwork
-- `GET /api/artworks/[id]/image` - Get full-size rendered PNG
-- `GET /api/artworks/[id]/thumbnail` - Get thumbnail PNG
+- `POST /api/artworks/[id]?action=like` - Like (once per IP per artwork; returns `{ likes, alreadyLiked }`)
+- `DELETE /api/artworks/[id]` - Admin only: requires `Authorization: Bearer <ADMIN_API_KEY>` (`src/lib/adminAuth.ts`)
+- `GET/POST /api/artworks/[id]/comments` - List / create comments (POST rate-limited to 5 per IP per minute → 429)
+- `GET /api/artworks/[id]/{image,preview,thumbnail}` - Legacy base64 image endpoints for artworks created before Supabase Storage
+
+Client IPs are never stored raw: `src/lib/clientIp.ts` hashes them with SHA-256 + `IP_HASH_SALT`.
 
 ### Database
 
-PostgreSQL (Neon) with Prisma ORM. Single `Artwork` model stores gridState as JSON string and imageData as base64 PNG.
+PostgreSQL (Neon) with Prisma ORM (`src/lib/artworkStore.ts` is the data access layer). Schema changes are applied with `npx prisma db push` (the `prisma/migrations` folder is stale SQLite history and is not used).
+- `Artwork` - gridState as JSON string, Supabase image URLs (legacy rows may have base64 `imageData`/`thumbnailData`/`previewData` instead)
+- `Comment` - per-artwork comments, `ipHash` for rate limiting
+- `ArtworkLike` - unique `(artworkId, ipHash)` to prevent duplicate likes
+
+### Environment Variables
+
+See `.env.example` and README: `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `IP_HASH_SALT`, `ADMIN_API_KEY`.
 
 ### SEO
 
@@ -117,9 +127,14 @@ PostgreSQL (Neon) with Prisma ORM. Single `Artwork` model stores gridState as JS
 ## Testing
 
 ### Unit Tests (Jest)
-- Located in `src/__tests__/` directory
+- Located in `__tests__/` directories next to the code they test (e.g. `src/lib/__tests__/`, `src/app/api/artworks/[id]/__tests__/`), matching `**/__tests__/**/*.test.ts?(x)`
+- Default environment is jsdom; API/server tests use the `@jest-environment node` docblock and mock `@/lib/prisma` or `@/lib/artworkStore`
 - Uses `@testing-library/react` for component testing
 - Run with `npm test`
+
+### Lint
+- ESLint 9 flat config (`eslint.config.mjs`) with `eslint-config-next` core-web-vitals + typescript; run with `npm run lint` (`next lint` was removed in Next 16)
+- `react-hooks/set-state-in-effect` is downgraded to a warning: reading localStorage/window on mount inside `useEffect` is intentional to avoid hydration mismatches
 
 ### E2E Tests (Playwright)
 - Located in `e2e/` directory
