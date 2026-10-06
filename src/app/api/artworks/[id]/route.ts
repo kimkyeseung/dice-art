@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getArtwork, deleteArtwork, likeArtwork } from '@/lib/artworkStore';
+import { isAdminRequest } from '@/lib/adminAuth';
 import { ApiErrorResponse } from '@/types';
 
 interface RouteContext {
@@ -34,11 +35,19 @@ export async function GET(
   }
 }
 
-// DELETE /api/artworks/[id] - 작품 삭제
+// DELETE /api/artworks/[id] - 작품 삭제 (관리자 전용)
 export async function DELETE(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (!isAdminRequest(request)) {
+    const error: ApiErrorResponse = {
+      error: 'UNAUTHORIZED',
+      message: '작품을 삭제할 권한이 없습니다.',
+    };
+    return NextResponse.json(error, { status: 401 });
+  }
+
   try {
     const { id } = await context.params;
     const deleted = await deleteArtwork(id);
