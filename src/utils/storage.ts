@@ -179,7 +179,7 @@ export function migrateOldStorage(): void {
 
     // 기존 데이터 삭제
     localStorage.removeItem(OLD_STORAGE_KEY);
-  } catch (error) {
+  } catch {
     // 마이그레이션 실패는 무시 (데이터 손실 없음)
   }
 }

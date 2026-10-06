@@ -23,7 +23,7 @@ export function useZoomPan(options: UseZoomPanOptions = {}) {
     translateY: 0,
   });
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // 줌 인/아웃
   const zoomIn = useCallback(() => {
