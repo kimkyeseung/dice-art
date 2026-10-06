@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dice Art is a Next.js web application that converts images into dice mosaic art. Users upload an image (or select from Unsplash preset images), which is analyzed and converted to a grid where each cell has a target dice value (1-6) based on brightness. Users then manually fill in each cell with dice to complete the artwork.
+Dice Art is a Next.js web application that converts images into dice mosaic art. Users upload an image (or select a random preset image from picsum.photos), which is analyzed and converted to a grid where each cell has a target dice value (0-6, 0 = blank dice) based on brightness. Users then manually fill in each cell with dice to complete the artwork, and can share finished artworks to the public gallery.
 
 This project is inspired by the amazing dice artwork of [@anna.dice.artworks](https://www.instagram.com/anna.dice.artworks/).
 
@@ -32,7 +32,8 @@ npx prisma studio        # Open Prisma database GUI
 
 ### Core Data Flow
 
-1. **Image Processing** (`src/utils/imageProcessor.ts`): Uploaded images are scaled to a grid (default 50 cells on longest side), and each pixel's luminance is mapped to a DiceValue (0-6) using ITU-R BT.601 standard
+1. **Image Processing** (`src/utils/imageProcessor.ts`, run off the main thread via `src/workers/imageProcessor.worker.ts` + `useImageProcessorWorker` hook when supported): Uploaded images are scaled to a grid (default 50 cells on longest side, clamped to 10-200), and each pixel's luminance is mapped to a DiceValue (0-6) using ITU-R BT.601 standard
+   - **Resolution upgrade**: after completing a grid, the work page offers re-processing the original image at 2x the longest side (50 → 100 → 200) via `handleHigherResolution`
 2. **Grid State** (`src/types/index.ts`): `GridState` contains a 2D array of `CellState`, each with `targetValue` (what to fill) and `filledValue` (user's input)
 3. **Persistence**: Work-in-progress saved to localStorage (`src/utils/storage.ts`) with UUID-based multi-work support. Completed artworks shared to the gallery: images uploaded from the client to Supabase Storage (`src/utils/supabaseStorage.ts`, public `artworks` bucket), metadata saved to PostgreSQL via Prisma
 
@@ -52,14 +53,19 @@ Key functions in `src/utils/storage.ts`:
 
 ### Key Components
 
-- **ImageUploader** (`src/components/ImageUploader.tsx`): Handles image upload via drag-and-drop or file selection. Also provides 4 Unsplash preset images for quick start
-- **CanvasGrid** (`src/components/CanvasGrid.tsx`): Main interactive grid using HTML5 Canvas for performance. Handles mouse/touch drag painting with Bresenham's line algorithm. Left-click fills, right-click/long-press clears. Uses refs for latest state access to avoid stale closures
+- **ImageUploader** (`src/components/ImageUploader.tsx`): Handles image upload via drag-and-drop or file selection. Also shows 4 random preset images from picsum.photos (with a hardcoded fallback list) for quick start
+- **CanvasGrid** (`src/components/CanvasGrid.tsx`): Main interactive grid using HTML5 Canvas for performance. Handles mouse/touch drag painting with Bresenham's line algorithm. Left-click fills, right-click/long-press clears, `pan` tool drags the scroll container. Uses refs for latest state access to avoid stale closures
 - **Dice/NumberCell**: Render filled dice or target number respectively (used in DicePalette)
-- **DicePalette** (`src/components/DicePalette.tsx`): Bottom toolbar for selecting dice value (0-6) or eraser. Keyboard shortcuts: 0-6 for dice, E for eraser. Mobile layout uses 2 rows (4+4), desktop uses single row
+- **DicePalette** (`src/components/DicePalette.tsx`): Bottom toolbar for selecting dice value (0-6), eraser, or pan tool. Single row on both mobile and desktop (compact sizing on mobile). Keyboard shortcuts (0-6 for dice, E for eraser) are handled in the work page's `keydown` listener, not in the palette
+- **ShareDialog** (`src/components/ShareDialog.tsx`): Gallery upload flow — exports the artwork, resizes to thumbnail/preview/original (`src/utils/imageResize.ts`), uploads to Supabase Storage, then `POST /api/artworks`
+- **Gallery UI**: `src/app/gallery/GalleryClient.tsx`, `ArtworkCard`, `ArtworkModal` (detail, like, download), `CommentSection`
+- **Header** (`src/components/Header.tsx`): Global navigation
+- **DebugControls** (`src/components/DebugControls.tsx`): Fill/clear helpers from `src/utils/debugUtils.ts`; renders only when `NODE_ENV === 'development'`
+- `NicknameDialog` and `ResumeWorkDialog` are exported from `src/components/index.ts` but currently unused (leftovers from the removed login feature / old single-work flow)
 - **VirtualJoystick** (`src/components/VirtualJoystick.tsx`): Mobile-only joystick for panning the grid view. Uses pointer events and requestAnimationFrame for smooth continuous movement
 - **ZoomControls** (`src/components/ZoomControls.tsx`): Zoom in/out buttons with progress preview button. Shows current zoom percentage
 - **ProgressPreviewDialog** (`src/components/ProgressPreviewDialog.tsx`): Modal dialog showing current progress as a canvas preview. Filled cells shown as dice, remaining cells as white grid
-- **SectionNavigator** (`src/components/SectionNavigator.tsx`): Floating minimap for navigating large grids (50x50+). Shows section progress with bottom sheet UI, keyboard shortcuts (Shift+Arrow), and haptic feedback
+- **SectionNavigator** (`src/components/SectionNavigator.tsx`): Floating minimap for navigating large grids (50x50+). Shows section progress with bottom sheet UI, keyboard shortcuts (Shift+Arrow), and haptic feedback. The floating button is draggable and its position is persisted in localStorage
 
 ### Section System (Large Grid Support)
 
@@ -138,9 +144,11 @@ See `.env.example` and README: `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABA
 
 ### E2E Tests (Playwright)
 - Located in `e2e/` directory
-- `desktop.spec.ts` - Desktop browser tests
 - `mobile-touch.spec.ts` - Mobile touch interaction tests (single finger drag, two-finger pan, long press, eraser, joystick)
 - `section-navigator.spec.ts` - Section navigation tests for large grids (floating button, bottom sheet, section switching)
+- `resolution-upgrade.spec.ts` - 2x/4x resolution upgrade after completion, persistence after reload
+- `gallery.spec.ts` - Gallery page (API requests are intercepted/mocked)
+- Projects: `chromium`, `Mobile Chrome`, `Mobile Safari`; the config starts `npm run dev` automatically (reuses an existing server outside CI)
 - Uses CDP (Chrome DevTools Protocol) for precise touch event simulation
 - Run with `npm run test:e2e`
 
@@ -148,8 +156,9 @@ See `.env.example` and README: `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABA
 
 - UI language is Korean
 - The app uses a custom `dice-pop` animation for visual feedback when placing dice (Canvas-based, 150ms, scale 0.8→1.1→1.0)
-- Export renders dice at 60px cell size with 2px gap
-- Unsplash images are fetched directly without API key using public image URLs
+- Export (`src/utils/exportImage.ts`) renders dice at 60px cell size with no gap between cells
+- Preset images come from picsum.photos public URLs (no API key)
+- `Ctrl+Shift+D` on the work page fills the grid with the correct answers (debug shortcut; not gated by `NODE_ENV`)
 - DiceValue type is `0 | 1 | 2 | 3 | 4 | 5 | 6` (includes 0 for blank dice)
 - PaletteValue type is `DiceValue | 'eraser' | 'pan'` for palette selection
 - SectionInfo/SectionLayout types define section boundaries and navigation structure
