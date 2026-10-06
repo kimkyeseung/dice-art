@@ -153,16 +153,36 @@ export async function deleteArtwork(id: string): Promise<boolean> {
   }
 }
 
-// 좋아요 증가
-export async function likeArtwork(id: string): Promise<Artwork | null> {
+// 좋아요 증가 (작품당 IP 1회)
+// 작품이 없으면 null, 이미 누른 경우 alreadyLiked: true
+export async function likeArtwork(
+  id: string,
+  ipHash: string
+): Promise<{ likes: number; alreadyLiked: boolean } | null> {
+  const existing = await prisma.artwork.findUnique({
+    where: { id },
+    select: { likes: true },
+  });
+  if (!existing) return null;
+
   try {
-    const artwork = await prisma.artwork.update({
-      where: { id },
-      data: { likes: { increment: 1 } },
-    });
-    return toArtwork(artwork as DbArtwork);
-  } catch {
-    return null;
+    const [, artwork] = await prisma.$transaction([
+      prisma.artworkLike.create({ data: { artworkId: id, ipHash } }),
+      prisma.artwork.update({
+        where: { id },
+        data: { likes: { increment: 1 } },
+        select: { likes: true },
+      }),
+    ]);
+    return { likes: artwork.likes, alreadyLiked: false };
+  } catch (error) {
+    // (artworkId, ipHash) 유니크 제약 위반 = 이미 좋아요를 누름
+    if ((error as { code?: string }).code === 'P2002') {
+      return { likes: existing.likes, alreadyLiked: true };
+    }
+    // 조회 직후 작품이 삭제된 경우
+    if ((error as { code?: string }).code === 'P2025') return null;
+    throw error;
   }
 }
 
@@ -264,12 +284,32 @@ export function validateCreateArtworkRequest(body: unknown): body is CreateArtwo
 
   if (typeof req.title !== 'string' || req.title.trim().length === 0) return false;
   if (typeof req.authorName !== 'string' || req.authorName.trim().length === 0) return false;
-  if (typeof req.imageUrl !== 'string' || !req.imageUrl.startsWith('http')) return false;
-  if (typeof req.thumbnailUrl !== 'string' || !req.thumbnailUrl.startsWith('http')) return false;
-  if (typeof req.previewUrl !== 'string' || !req.previewUrl.startsWith('http')) return false;
+  if (!isArtworkStorageUrl(req.imageUrl)) return false;
+  if (!isArtworkStorageUrl(req.thumbnailUrl)) return false;
+  if (!isArtworkStorageUrl(req.previewUrl)) return false;
   if (!validateGridState(req.gridState)) return false;
 
   return true;
+}
+
+// 우리 Supabase Storage의 artworks 버킷 공개 URL인지 확인
+// (외부 임의 이미지가 갤러리에 노출되는 것을 방지)
+export function isArtworkStorageUrl(value: unknown): boolean {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (typeof value !== 'string' || !supabaseUrl) return false;
+
+  try {
+    const url = new URL(value);
+    const allowedOrigin = new URL(supabaseUrl).origin;
+    return (
+      url.protocol === 'https:' &&
+      url.origin === allowedOrigin &&
+      url.pathname.startsWith('/storage/v1/object/public/artworks/') &&
+      !url.pathname.includes('..')
+    );
+  } catch {
+    return false;
+  }
 }
 
 // ===== 댓글 관련 함수 =====
@@ -294,17 +334,32 @@ function toComment(dbComment: {
 // 댓글 생성
 export async function createComment(
   artworkId: string,
-  request: CreateCommentRequest
+  request: CreateCommentRequest,
+  ipHash: string
 ): Promise<Comment> {
   const comment = await prisma.comment.create({
     data: {
-      content: request.content,
-      authorName: request.authorName,
+      content: request.content.trim(),
+      authorName: request.authorName.trim(),
       artworkId,
+      ipHash,
     },
   });
 
   return toComment(comment);
+}
+
+// 최근 windowMs 동안 같은 IP가 작성한 댓글 수
+export async function countRecentCommentsByIp(
+  ipHash: string,
+  windowMs: number
+): Promise<number> {
+  return prisma.comment.count({
+    where: {
+      ipHash,
+      createdAt: { gte: new Date(Date.now() - windowMs) },
+    },
+  });
 }
 
 // 댓글 목록 조회
@@ -346,6 +401,7 @@ export function validateCreateCommentRequest(body: unknown): body is CreateComme
   if (typeof req.content !== 'string' || req.content.trim().length === 0) return false;
   if (typeof req.authorName !== 'string' || req.authorName.trim().length === 0) return false;
   if (req.content.length > 500) return false; // 최대 500자
+  if (req.authorName.trim().length > 50) return false; // 최대 50자
 
   return true;
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getArtwork, deleteArtwork, likeArtwork } from '@/lib/artworkStore';
 import { isAdminRequest } from '@/lib/adminAuth';
+import { getClientIpHash } from '@/lib/clientIp';
 import { ApiErrorResponse } from '@/types';
 
 interface RouteContext {
@@ -82,9 +83,9 @@ export async function POST(
     const action = searchParams.get('action');
 
     if (action === 'like') {
-      const artwork = await likeArtwork(id);
+      const result = await likeArtwork(id, getClientIpHash(request));
 
-      if (!artwork) {
+      if (!result) {
         const error: ApiErrorResponse = {
           error: 'NOT_FOUND',
           message: '작품을 찾을 수 없습니다.',
@@ -92,7 +93,7 @@ export async function POST(
         return NextResponse.json(error, { status: 404 });
       }
 
-      return NextResponse.json({ likes: artwork.likes });
+      return NextResponse.json(result);
     }
 
     const error: ApiErrorResponse = {

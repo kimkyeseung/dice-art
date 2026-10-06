@@ -30,8 +30,20 @@ model Artwork {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   comments      Comment[]
+  likeRecords   ArtworkLike[]
 
   @@index([createdAt])
+}
+
+// 좋아요 중복 방지 (작품당 IP 1회)
+model ArtworkLike {
+  id        String   @id @default(cuid())
+  artworkId String
+  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  ipHash    String   // SHA-256(salt + IP), 원본 IP는 저장하지 않음
+  createdAt DateTime @default(now())
+
+  @@unique([artworkId, ipHash])
 }
 
 model Comment {
@@ -40,8 +52,10 @@ model Comment {
   authorName String   // 하위 호환용 유지
   artworkId  String
   artwork    Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  ipHash     String?  // 작성 속도 제한용, 기존 댓글은 null
   createdAt  DateTime @default(now())
 
   @@index([artworkId])
   @@index([createdAt])
+  @@index([ipHash, createdAt])
 }
