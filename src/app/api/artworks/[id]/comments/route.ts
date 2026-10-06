@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createComment, getComments, validateCreateCommentRequest } from '@/lib/artworkStore';
+import {
+  countRecentCommentsByIp,
+  createComment,
+  getComments,
+  validateCreateCommentRequest,
+} from '@/lib/artworkStore';
+import { getClientIpHash } from '@/lib/clientIp';
+
+// IP당 1분에 최대 5개
+const COMMENT_RATE_LIMIT = 5;
+const COMMENT_RATE_WINDOW_MS = 60_000;
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -43,7 +53,16 @@ export async function POST(
       );
     }
 
-    const comment = await createComment(id, body);
+    const ipHash = getClientIpHash(request);
+    const recentCount = await countRecentCommentsByIp(ipHash, COMMENT_RATE_WINDOW_MS);
+    if (recentCount >= COMMENT_RATE_LIMIT) {
+      return NextResponse.json(
+        { error: 'RATE_LIMITED', message: '댓글을 너무 자주 작성했습니다. 잠시 후 다시 시도해 주세요.' },
+        { status: 429, headers: { 'Retry-After': String(COMMENT_RATE_WINDOW_MS / 1000) } }
+      );
+    }
+
+    const comment = await createComment(id, body, ipHash);
 
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {

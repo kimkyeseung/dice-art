@@ -18,8 +18,7 @@ const PREVIEW_SIZE = 900;
  */
 function resizeImage(
   sourceCanvas: HTMLCanvasElement,
-  maxSize: number,
-  quality: number = 0.8
+  maxSize: number
 ): string {
   const { width, height } = sourceCanvas;
 

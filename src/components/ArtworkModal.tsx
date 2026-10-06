@@ -14,6 +14,7 @@ interface ArtworkModalProps {
 export function ArtworkModal({ artwork, onClose, onLike }: ArtworkModalProps) {
   const [likes, setLikes] = useState(artwork.likes);
   const [isLiking, setIsLiking] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
 
   const formattedDate = new Date(artwork.createdAt).toLocaleDateString('ko-KR', {
     year: 'numeric',
@@ -22,7 +23,7 @@ export function ArtworkModal({ artwork, onClose, onLike }: ArtworkModalProps) {
   });
 
   const handleLike = async () => {
-    if (isLiking) return;
+    if (isLiking || hasLiked) return;
 
     setIsLiking(true);
     try {
@@ -33,7 +34,8 @@ export function ArtworkModal({ artwork, onClose, onLike }: ArtworkModalProps) {
       if (response.ok) {
         const data = await response.json();
         setLikes(data.likes);
-        onLike?.();
+        setHasLiked(true);
+        if (!data.alreadyLiked) onLike?.();
       }
     } catch (error) {
       console.error('Failed to like artwork:', error);
@@ -109,11 +111,14 @@ export function ArtworkModal({ artwork, onClose, onLike }: ArtworkModalProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={handleLike}
-              disabled={isLiking}
+              disabled={isLiking || hasLiked}
+              title={hasLiked ? '이미 좋아요를 눌렀어요' : undefined}
               className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 isLiking
                   ? 'bg-neutral-100 text-neutral-400'
-                  : 'bg-red-50 hover:bg-red-100 text-red-500'
+                  : hasLiked
+                    ? 'bg-red-100 text-red-500 cursor-default'
+                    : 'bg-red-50 hover:bg-red-100 text-red-500'
               }`}
             >
               <span>♥</span>

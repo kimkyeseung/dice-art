@@ -17,24 +17,31 @@ export function CommentSection({ artworkId }: CommentSectionProps) {
   const [error, setError] = useState<string | null>(null);
 
   // 댓글 목록 불러오기
+  // artworkId가 바뀌면 이전 요청 결과는 무시 (늦게 도착한 응답이 덮어쓰지 않도록)
   useEffect(() => {
-    fetchComments();
-  }, [artworkId]);
+    let cancelled = false;
 
-  const fetchComments = async () => {
-    try {
-      const response = await fetch(`/api/artworks/${artworkId}/comments`);
-      if (response.ok) {
-        const data = await response.json();
-        setComments(data.comments);
-        setTotal(data.total);
+    const fetchComments = async () => {
+      try {
+        const response = await fetch(`/api/artworks/${artworkId}/comments`);
+        if (response.ok) {
+          const data = await response.json();
+          if (cancelled) return;
+          setComments(data.comments);
+          setTotal(data.total);
+        }
+      } catch (err) {
+        console.error('Failed to fetch comments:', err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to fetch comments:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+
+    fetchComments();
+    return () => {
+      cancelled = true;
+    };
+  }, [artworkId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

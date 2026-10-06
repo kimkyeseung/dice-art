@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, useEffect, useMemo, memo } from 'react';
+import { useCallback, useRef, useEffect, useMemo, memo } from 'react';
 import { GridState, DiceValue } from '@/types';
 import {
   renderGrid,
@@ -77,7 +77,6 @@ export const CanvasGrid = memo(function CanvasGrid({
   useEffect(() => { selectedDiceRef.current = selectedDice; }, [selectedDice]);
   useEffect(() => { showMismatchRef.current = showMismatch; }, [showMismatch]);
 
-  const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const lastCellRef = useRef<{ row: number; col: number } | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -278,7 +277,6 @@ export const CanvasGrid = memo(function CanvasGrid({
     if (selectedDiceRef.current === 'pan') {
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
       isDraggingRef.current = true;
-      setIsDragging(true);
       return;
     }
 
@@ -300,7 +298,6 @@ export const CanvasGrid = memo(function CanvasGrid({
       }, LONG_PRESS_DURATION);
 
       isDraggingRef.current = true;
-      setIsDragging(true);
       fillCell(cell.row, cell.col);
     }
   }, [getCellFromPoint, fillCell, resetCell]);
@@ -336,7 +333,6 @@ export const CanvasGrid = memo(function CanvasGrid({
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     cancelLongPress();
     isDraggingRef.current = false;
-    setIsDragging(false);
     lastCellRef.current = null;
     lastPanPointRef.current = null;
     isLongPressRef.current = false;

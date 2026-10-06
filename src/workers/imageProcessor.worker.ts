@@ -131,7 +131,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
         data.maxCells
       );
 
-      const result: ProcessImageResult = {
+      const result: WorkerResult = {
         type: 'processImageResult',
         gridState,
       };
@@ -139,7 +139,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
       self.postMessage(result);
     }
   } catch (error) {
-    const errorResult: ErrorResult = {
+    const errorResult: WorkerResult = {
       type: 'error',
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     };

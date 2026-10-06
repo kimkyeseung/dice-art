@@ -81,7 +81,16 @@ export default function WorkPage({ params }: WorkPageProps) {
   } = useZoomPan({ minScale: 0.5, maxScale: 3, initialScale: 1 });
 
   // 스크롤 컨테이너 ref
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // 그리드 컨테이너를 줌/팬 ref와 스크롤 ref에 모두 연결
+  const setGridContainer = useCallback(
+    (el: HTMLDivElement | null) => {
+      containerRef.current = el;
+      scrollContainerRef.current = el;
+    },
+    [containerRef]
+  );
 
   // Web Worker 훅
   const { processImage: processImageWorker, isSupported: isWorkerSupported } =
@@ -267,8 +276,13 @@ export default function WorkPage({ params }: WorkPageProps) {
         return;
       }
 
-      // Ctrl+Shift+D: 정답대로 채우기 (디버그)
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "d") {
+      // Ctrl+Shift+D: 정답대로 채우기 (디버그, 개발 환경 전용 - E2E 테스트에서 사용)
+      if (
+        process.env.NODE_ENV === "development" &&
+        e.ctrlKey &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "d"
+      ) {
         e.preventDefault();
         if (gridState) {
           setGridState(fillCorrect(gridState));
@@ -526,16 +540,7 @@ export default function WorkPage({ params }: WorkPageProps) {
               {/* 그리드 영역 */}
               <div className="relative flex-1 min-h-0 flex flex-col">
                 <div
-                  ref={(el) => {
-                    // 두 ref를 모두 연결
-                    if (containerRef)
-                      (
-                        containerRef as React.MutableRefObject<HTMLDivElement | null>
-                      ).current = el;
-                    (
-                      scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>
-                    ).current = el;
-                  }}
+                  ref={setGridContainer}
                   className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-6 shadow-sm overflow-auto flex-1 min-h-0"
                 >
                   <div
